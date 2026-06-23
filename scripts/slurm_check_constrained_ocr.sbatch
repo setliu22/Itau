@@ -16,7 +16,6 @@ mkdir -p logs
   scripts/build_visual_identity_atlas.py \
   scripts/build_ocr_confusion_atlas.py \
   scripts/build_character_ocr_atlases.py \
-  scripts/build_exhaustive_character_substitution_atlas.py \
   scripts/rank_contextual_ocr_substitutions.py \
   scripts/ocr_common.py \
   scripts/transform_pairs_with_ocr_atlas.py \
@@ -29,7 +28,6 @@ bash -n \
   scripts/slurm_build_ocr_atlas.sbatch \
   scripts/slurm_build_visual_identity_atlas.sbatch \
   scripts/slurm_build_character_ocr_atlases.sbatch \
-  scripts/slurm_build_exhaustive_character_substitution_atlas.sbatch \
   scripts/slurm_rank_contextual_ocr_substitutions.sbatch \
   scripts/slurm_transform_validation_visual_identity.sbatch \
   scripts/slurm_transform_validation_identity_only.sbatch \

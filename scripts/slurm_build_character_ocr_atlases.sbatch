@@ -16,7 +16,7 @@ mkdir -p logs .cache/ocr_atlas .cache/visual_identity_atlas
 .venv/bin/python scripts/build_character_ocr_atlases.py \
   --identity-input .cache/visual_identity_atlas/dejavu_raster_source_identity_atlas.parquet \
   --identity-output .cache/visual_identity_atlas/dejavu_raster_character_ocr_preserving_atlas.parquet \
-  --attack-input .cache/ocr_atlas/dejavu_trocr_white_on_black_source_identity_atlas.parquet \
+  --attack-input .cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet \
   --attack-output .cache/ocr_atlas/dejavu_trocr_character_ocr_attacking_atlas.parquet \
   --device cuda \
   --batch-size "${OCR_BATCH_SIZE:-256}" \

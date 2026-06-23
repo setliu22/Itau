@@ -10,7 +10,7 @@ attack_character_atlas=.cache/ocr_atlas/dejavu_trocr_character_ocr_attacking_atl
 character_dependency=()
 for source in \
   .cache/visual_identity_atlas/dejavu_raster_source_identity_atlas.parquet \
-  .cache/ocr_atlas/dejavu_trocr_white_on_black_source_identity_atlas.parquet \
+  .cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet \
   scripts/build_character_ocr_atlases.py \
   scripts/ocr_common.py; do
   if [[ ! -f "${identity_character_atlas}" || ! -f "${attack_character_atlas}" \

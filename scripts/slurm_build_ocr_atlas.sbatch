@@ -18,7 +18,9 @@ export HF_HOME="${HF_HOME:-/home/setliu22/.cache/huggingface}"
 
 .venv/bin/python scripts/build_ocr_confusion_atlas.py \
   --feature-hdf .cache/font_features/dejavu_sans_trocr.hdf \
-  --output .cache/ocr_atlas/dejavu_trocr_white_on_black_source_identity_atlas.parquet \
+  --output .cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet \
+  --ocr-model-names microsoft/trocr-small-printed microsoft/trocr-base-handwritten \
+  --ocr-render-variants robust \
   --device cuda \
   --batch-size "${OCR_BATCH_SIZE:-256}" \
   --top-k "${ATLAS_TOP_K:-25}" \

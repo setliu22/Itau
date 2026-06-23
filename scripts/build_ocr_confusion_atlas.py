@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a DejaVu/TrOCR OCR-confusion atlas for domain homoglyph generation."""
+"""Build a nearest-neighbor OCR-confusion atlas for domain homoglyph generation."""
 
 from __future__ import annotations
 
@@ -14,11 +14,13 @@ import pandas as pd
 
 from glyph_identity import score_source_identity
 from ocr_common import (
+    CHARACTER_OCR_ALPHABET,
     TrOCRTextReader,
-    canonical_ocr_text,
+    canonical_character_ocr_text,
     default_dejavu_sans_path,
     is_latin_greek_cyrillic_replacement,
 )
+from transform_pairs_with_ocr_atlas import exact_output_rate, ocr_render_variations
 
 
 MULTI_CHAR_OPERATIONS = [
@@ -38,7 +40,20 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--manifest-output", type=Path, default=None)
     parser.add_argument("--font-path", type=Path, default=None)
-    parser.add_argument("--ocr-model-name", default="microsoft/trocr-small-printed")
+    parser.add_argument(
+        "--ocr-model-name",
+        default="microsoft/trocr-small-printed",
+        help="Compatibility alias for a single development OCR checkpoint.",
+    )
+    parser.add_argument(
+        "--ocr-model-names",
+        nargs="+",
+        default=[
+            "microsoft/trocr-small-printed",
+            "microsoft/trocr-base-handwritten",
+        ],
+        help="Development OCR checkpoints that must all agree on the candidate screen.",
+    )
     parser.add_argument("--device", choices=["auto", "cpu", "mps", "cuda"], default="auto")
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--top-k", type=int, default=25)
@@ -50,6 +65,30 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="For single-glyph substitutions, require the claimed source to be closer than every other canonical span.",
     )
+    parser.add_argument(
+        "--ocr-render-variants",
+        choices=["canonical", "robust"],
+        default="robust",
+        help="Character OCR render variants. Robust uses four font-size/baseline variations.",
+    )
+    parser.add_argument(
+        "--min-clean-exact-match-rate",
+        type=float,
+        default=1.0,
+        help="Minimum exact recovery rate for the clean source glyph.",
+    )
+    parser.add_argument(
+        "--max-attack-exact-match-rate",
+        type=float,
+        default=0.0,
+        help="Maximum exact match rate for the source label when OCR reads the candidate glyph.",
+    )
+    parser.add_argument(
+        "--min-attack-exact-match-rate",
+        type=float,
+        default=1.0,
+        help="Minimum exact match rate for the non-source OCR label when OCR reads the candidate glyph.",
+    )
     parser.add_argument("--safe-hard-threshold", type=float, default=0.20)
     parser.add_argument("--ambiguous-low", type=float, default=0.35)
     parser.add_argument("--ambiguous-high", type=float, default=0.65)
@@ -59,16 +98,17 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.ocr_model_names:
+        ocr_model_names = list(dict.fromkeys(args.ocr_model_names))
+    else:
+        ocr_model_names = [args.ocr_model_name]
+    if not ocr_model_names:
+        raise ValueError("At least one OCR model is required")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     manifest_output = args.manifest_output or args.output.with_suffix(".manifest.json")
 
     candidates = build_candidate_rows(args)
-    reader = TrOCRTextReader(
-        model_name=args.ocr_model_name,
-        font_path=args.font_path or default_dejavu_sans_path(),
-        device=args.device,
-    )
-    rows = score_candidates(candidates, reader, args)
+    rows = score_candidates(candidates, args, ocr_model_names=ocr_model_names)
     atlas = pd.DataFrame(rows)
     atlas = atlas[atlas["visual_similarity_score"].ge(args.min_visual_similarity)].copy()
     single_mask = atlas["operation"].eq("single_homoglyph")
@@ -83,17 +123,24 @@ def main() -> int:
     atlas.to_parquet(args.output, index=False)
 
     manifest = {
+        "claim_scope": "proxy-only; nearest-neighbor proposals screened by characterwise OCR, not human-verified",
         "feature_hdf": str(args.feature_hdf),
         "output": str(args.output),
         "font_path": str(args.font_path or default_dejavu_sans_path()),
         "ocr_model_name": args.ocr_model_name,
+        "ocr_model_names": ocr_model_names,
         "top_k": args.top_k,
         "real_spans": args.real_spans,
         "min_visual_similarity": args.min_visual_similarity,
         "min_source_identity_margin": args.min_source_identity_margin,
+        "ocr_render_variants": args.ocr_render_variants,
+        "min_clean_exact_match_rate": args.min_clean_exact_match_rate,
+        "max_attack_exact_match_rate": args.max_attack_exact_match_rate,
+        "min_attack_exact_match_rate": args.min_attack_exact_match_rate,
         "safe_hard_threshold": args.safe_hard_threshold,
         "ambiguous_range": [args.ambiguous_low, args.ambiguous_high],
         "candidate_rows_before_filter": len(candidates),
+        "candidate_rows_after_ocr_screen": len(rows),
         "atlas_rows": int(len(atlas)),
         "bucket_counts": atlas["bucket"].value_counts(dropna=False).to_dict(),
     }
@@ -160,48 +207,109 @@ def build_candidate_rows(args: argparse.Namespace) -> list[dict[str, Any]]:
 
 def score_candidates(
     candidates: list[dict[str, Any]],
-    reader: TrOCRTextReader,
     args: argparse.Namespace,
+    *,
+    ocr_model_names: list[str],
 ) -> list[dict[str, Any]]:
-    variations = [
-        {"font_size": 52, "y_shift": 0},
-        {"font_size": 56, "y_shift": 0},
-        {"font_size": 60, "y_shift": -1},
-        {"font_size": 56, "y_shift": 1},
+    variations = ocr_render_variations(args.ocr_render_variants)
+    font_path = args.font_path or default_dejavu_sans_path()
+    texts = sorted(
+        {
+            str(row["real_span"])
+            for row in candidates
+        }
+        | {
+            str(row["candidate_span"])
+            for row in candidates
+        }
+    )
+    readers = [
+        TrOCRTextReader(
+            model_name=model_name,
+            font_path=font_path,
+            device=args.device,
+        )
+        for model_name in ocr_model_names
     ]
-    base_images = [reader.render_text(row["real_span"]) for row in candidates]
-    cand_images = [reader.render_text(row["candidate_span"]) for row in candidates]
-    base_emb = reader.embed_images(base_images, batch_size=args.batch_size)
-    cand_emb = reader.embed_images(cand_images, batch_size=args.batch_size)
-    encoder_visual_scores = np.sum(base_emb * cand_emb, axis=1)
+    outputs_by_model = {
+        model_name: reader.recognize_characterwise(
+            texts,
+            batch_size=args.batch_size,
+            variations=variations,
+        )
+        for model_name, reader in zip(ocr_model_names, readers, strict=True)
+    }
     identity_scores = [
         score_source_identity(
             str(row["real_span"]),
             str(row["candidate_span"]),
-            font=reader.font,
+            font=readers[0].font,
             canonical_spans=args.real_spans,
         )
         for row in candidates
     ]
 
-    all_images = []
-    image_to_candidate: list[int] = []
-    for idx, row in enumerate(candidates):
-        for variation in variations:
-            all_images.append(reader.render_text(row["candidate_span"], **variation))
-            image_to_candidate.append(idx)
-    ocr_texts = reader.recognize_images(all_images, batch_size=args.batch_size)
-
-    grouped: list[list[str]] = [[] for _ in candidates]
-    for candidate_idx, ocr_text in zip(image_to_candidate, ocr_texts):
-        grouped[candidate_idx].append(ocr_text)
-
     rows = []
     for idx, row in enumerate(candidates):
-        real_norm = canonical_ocr_text(row["real_span"])
-        normalized = [canonical_ocr_text(text) for text in grouped[idx]]
-        real_hits = sum(text == real_norm for text in normalized)
-        ocr_real_rate = real_hits / max(1, len(normalized))
+        source = str(row["real_span"])
+        target = canonical_character_ocr_text(source)
+        by_model: dict[str, Any] = {}
+        clean_pass = True
+        attack_pass = True
+        source_rates: list[float] = []
+        attack_rates: list[float] = []
+        attack_labels: list[str] = []
+        for model_name in ocr_model_names:
+            outputs = outputs_by_model[model_name]
+            clean_outputs = outputs[source]
+            candidate_outputs = outputs[str(row["candidate_span"])]
+            clean_rate = exact_output_rate(
+                clean_outputs,
+                target,
+                normalizer=canonical_character_ocr_text,
+            )
+            normalized_candidate_outputs = [canonical_character_ocr_text(text) for text in candidate_outputs]
+            unique_candidate_outputs = {text for text in normalized_candidate_outputs if text}
+            attack_label = ""
+            if len(unique_candidate_outputs) == 1:
+                attack_label = next(iter(unique_candidate_outputs))
+            source_rate = exact_output_rate(
+                candidate_outputs,
+                target,
+                normalizer=canonical_character_ocr_text,
+            )
+            attack_rate = (
+                exact_output_rate(
+                    candidate_outputs,
+                    attack_label,
+                    normalizer=canonical_character_ocr_text,
+                )
+                if attack_label
+                else 0.0
+            )
+            clean_pass &= clean_rate >= args.min_clean_exact_match_rate
+            attack_pass &= (
+                attack_label != ""
+                and attack_label != source
+                and attack_label in CHARACTER_OCR_ALPHABET
+                and len(attack_label) == 1
+                and source_rate <= args.max_attack_exact_match_rate
+                and attack_rate >= args.min_attack_exact_match_rate
+            )
+            source_rates.append(source_rate)
+            attack_rates.append(attack_rate)
+            attack_labels.append(attack_label)
+            by_model[model_name] = {
+                "clean_outputs": clean_outputs,
+                "clean_exact_match_rate": clean_rate,
+                "candidate_outputs": candidate_outputs,
+                "candidate_source_exact_match_rate": source_rate,
+                "candidate_attack_exact_match_rate": attack_rate,
+                "candidate_attack_label": attack_label,
+            }
+        if not (clean_pass and attack_pass):
+            continue
+        ocr_real_rate = max(source_rates, default=1.0)
         if ocr_real_rate <= args.safe_hard_threshold:
             bucket = "safe_hard"
         elif args.ambiguous_low <= ocr_real_rate <= args.ambiguous_high:
@@ -213,16 +321,22 @@ def score_candidates(
                 **row,
                 "candidate_codepoints": json.dumps(row["candidate_codepoints"]),
                 "visual_similarity_score": float(identity_scores[idx].source_similarity),
-                "encoder_similarity_score": float(encoder_visual_scores[idx]),
+                "encoder_similarity_score": (
+                    float(row["feature_similarity"])
+                    if pd.notna(row["feature_similarity"])
+                    else np.nan
+                ),
                 "closest_other_canonical": identity_scores[idx].closest_canonical,
                 "closest_other_similarity": float(identity_scores[idx].closest_other_similarity),
                 "source_identity_margin": float(identity_scores[idx].source_margin),
                 "ocr_real_rate": float(ocr_real_rate),
                 "ocr_wrong_rate": float(1.0 - ocr_real_rate),
                 "bucket": bucket,
-                "ocr_texts_json": json.dumps(grouped[idx], ensure_ascii=False),
-                "ocr_normalized_json": json.dumps(normalized, ensure_ascii=False),
-                "num_variations": len(grouped[idx]),
+                "character_ocr_models_json": json.dumps(by_model, ensure_ascii=False, sort_keys=True),
+                "character_ocr_attack_labels_json": json.dumps(attack_labels, ensure_ascii=False),
+                "character_ocr_attack_rates_json": json.dumps(attack_rates, ensure_ascii=False),
+                "ocr_render_variants": json.dumps(variations, ensure_ascii=False),
+                "num_variations": len(variations),
             }
         )
     return rows

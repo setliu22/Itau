@@ -23,7 +23,7 @@ export HF_HOME="${HF_HOME:-/home/setliu22/.cache/huggingface}"
   --after "${FINAL_PATH:-data/validation_ocr_constrained_legit/validate_pairs_ref_10k_clean_ocr_atlas.parquet}" \
   --transform-audit "${TRANSFORM_AUDIT_PATH:-data/validation_ocr_constrained/audit/validate_pairs_ref_10k_clean_ocr_atlas_audit.parquet}" \
   --legit-audit "${LEGIT_AUDIT_PATH:-data/validation_ocr_constrained_legit/audit/validate_pairs_ref_10k_clean_ocr_atlas_official_legit_audit.parquet}" \
-  --ocr-atlas .cache/ocr_atlas/dejavu_trocr_white_on_black_source_identity_atlas.parquet \
+  --ocr-atlas .cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet \
   --identity-atlas .cache/visual_identity_atlas/dejavu_raster_source_identity_atlas.parquet \
   --identity-seed-json data/substitutions/visual_identity_confusables.json \
   --metrics-output "${output_dir}/validation_baseline_metrics.json" \

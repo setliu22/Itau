@@ -18,10 +18,10 @@ if [[ -n "${MAX_ROWS:-}" ]]; then
 fi
 mkdir -p logs "${output_dir}"
 
-.venv/bin/python scripts/transform_pairs_with_ocr_atlas.py \
-  data/clean_sources/validate_pairs_ref_10k_clean.parquet \
-  --atlas .cache/ocr_atlas/dejavu_trocr_white_on_black_source_identity_atlas.parquet \
-  --identity-atlas .cache/visual_identity_atlas/dejavu_raster_character_ocr_preserving_atlas.parquet \
+  .venv/bin/python scripts/transform_pairs_with_ocr_atlas.py \
+    data/clean_sources/validate_pairs_ref_10k_clean.parquet \
+    --atlas .cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet \
+    --identity-atlas .cache/visual_identity_atlas/dejavu_raster_character_ocr_preserving_atlas.parquet \
   --output-dir "${output_dir}" \
   --generation-mode identity-only \
   --verify-eval all \

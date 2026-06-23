@@ -47,6 +47,9 @@ Build the OCR confusion atlas on an A100 node:
 sbatch scripts/slurm_build_ocr_atlas.sbatch
 ```
 
+That atlas now comes from nearest-neighbor glyph proposals screened with the
+characterwise OCR path, not the old exhaustive font-cmap sweep.
+
 Generate OCR-atlas spoof datasets and then filter label-1 rows with the official LEGIT model:
 
 ```bash

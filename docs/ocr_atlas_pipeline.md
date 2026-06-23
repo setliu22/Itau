@@ -19,6 +19,10 @@ This writes:
 .cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet
 ```
 
+The atlas builder proposes nearest-neighbor glyph candidates from the cached
+font feature space, then keeps only rows that survive the characterwise OCR
+screen on robust render variants.
+
 ## Generate And Filter
 
 ```bash
@@ -39,7 +43,7 @@ data/final_ocr_atlas_wob_fast_legit/
 
 ## Substitutions
 
-The atlas builder includes single-character OCR-confusable homoglyphs plus:
+The OCR-confusable atlas includes single-character homoglyphs plus:
 
 - `m -> rn`
 - `w -> vv`
