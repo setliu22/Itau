@@ -1,0 +1,64 @@
+# CURRENT HANDOFF - READ THIS FIRST (2026-06-22, FOUR BOUNDED 1K DATASETS NEXT)
+
+Read `AGENTS.md` first. Never run repository code, tests, OCR, LEGIT, or data
+work on the login node; use Slurm. OCR/LEGIT jobs require an A100.
+
+Objective: build and evaluate four isolated 1k validation datasets on the same
+bounded source sample:
+- D1 lookalike-only: demonstrate RF text-distance accuracy (M3) is below 100%.
+- D2 OCR-confusable-only, with few substitutions for legibility: demonstrate
+  whole-image and forced-Latin character OCR match rates (M1/M2) are below 100%.
+- D3 multicharacter-only: make M1-M4 low.
+- D4 lookalike + OCR-confusable + multicharacter: make M1-M4 low.
+M3 is a fixed, stratified 90/10 Random Forest evaluation on text-distance
+features. M4 applies forced-Latin character OCR before the RF text-distance
+pipeline. Keep row IDs/splits aligned across datasets and report retained rows.
+
+Confirmed generation design: build a persistent source-character -> replacement
+table from substitutions that fool the active OCR under the production DejaVu
+Sans white-on-black renderer, then rank/filter them by official LEGIT word-pair
+scores in real contexts. Use seeded random replacements from that table. LEGIT
+must retain its official Unifont pair renderer; its scores are context-level,
+not unsupported isolated-character claims. Example mappings must never be
+hard-coded: the exhaustive font-cmap screen records actual OCR outputs, and the
+stable table records those outputs plus a contextual OCR/LEGIT example.
+
+Confirmed state:
+- Syntax/unit gate `16324026` passed all 16 tests after the empirical
+  substitution table and `ocr-confusable-only` random-generation edits.
+- Slurm `16300473` COMPLETED 0:0 on A100 node4501 in 00:11:10.
+- Slurm `16304829` COMPLETED 0:0 on A100 node4501 in 00:38:09.
+- Outputs: `.cache/exhaustive_character_substitutions/contextual_top5/`.
+- 431 substitutions were tested in 6,896 contexts; 1,120 contexts passed
+  clean recovery and both whole-word/character OCR attacks across both
+  development models. 636 of those had official LEGIT score > 0.
+- 323 substitutions had at least one attack context; 234 met support >= 2.
+- Supported positive-q25 replacements cover 27/37 expected source symbols.
+- Earlier syntax/unit gate `16299300` passed all 14 tests.
+- Bounded mixed output is
+  `data/validation_ocr_constrained_1k_top_source/`: 479 final rows, including
+  only 108 positives and all 371 negatives. It is a useful constraint audit,
+  but it is not any of D1-D4 and should not be presented as the requested 1k
+  dataset.
+- Cleanup removed cancelled multimodel outputs, superseded smoke/context-probe
+  caches, bytecode, old retry logs, and failed-job logs. On 2026-06-23,
+  project bytecode caches and local Slurm logs were deleted before the initial
+  GitHub upload; retained status summaries above replace those local logs.
+
+Next step: implement a single bounded D1-D4 generation/evaluation interface,
+reusing `data/substitutions/ocr_confusable_legit_ranked.parquet` for
+OCR-confusable candidates and the existing identity atlas for lookalikes. Do
+not launch four unrelated jobs with inconsistent samples or splits. Submit
+syntax/tests through Slurm, then a small A100 generation/evaluation chain.
+Report M1-M4 in one comparison table.
+
+Immediate resume step: submit
+`scripts/slurm_rank_contextual_ocr_substitutions.sbatch` on a live A100
+partition to rebuild the stable empirical table and CSV. Do not insert any
+example mapping manually.
+
+Open issues: results remain proxy-only and sparse per mapping; several rare-
+script/PUA replacements are visually questionable. The bounded mixed run's
+strict conjunction retained too few positives, so D1-D4 generation must report
+coverage instead of silently shrinking the experiment. Do not launch full
+validation or touch train/test.

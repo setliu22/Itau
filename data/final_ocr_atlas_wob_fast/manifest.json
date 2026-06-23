@@ -1,0 +1,201 @@
+{
+  "ambiguous_fraction": 0.15,
+  "ambiguous_range": [
+    0.35,
+    0.65
+  ],
+  "atlas": ".cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet",
+  "device": "cpu",
+  "excluded_operations": [
+    "h_to_li"
+  ],
+  "files": {
+    "test_pairs_ref_nocom_clean.parquet": {
+      "accepted_positive_rows_before_ocr_filter": 146119,
+      "audit_path": "data/final_ocr_atlas_wob_fast/audit/test_pairs_ref_nocom_clean_ocr_atlas_audit.parquet",
+      "final_dot_com_suffix_count": 0,
+      "final_duplicate_rows_count": 0,
+      "final_label_counts": {
+        "0.0": 91745,
+        "1.0": 146119
+      },
+      "final_rows": 237864,
+      "final_same_fraudulent_real_count": 0,
+      "generation_attempts": {
+        "accepted_rows": 146119,
+        "duplicate_rows": 66,
+        "duplicate_total_attempts": 66,
+        "failed_rows": 0,
+        "failed_total_attempts": 0,
+        "max_attempts": 1,
+        "mean_attempts": 1.0,
+        "p50_attempts": 1.0,
+        "p95_attempts": 1.0,
+        "retry_rate": 0.0,
+        "rows_needing_retry": 0,
+        "total_attempts": 146119
+      },
+      "input_file": "data/clean_sources/test_pairs_ref_nocom_clean.parquet",
+      "input_rows": 237930,
+      "output_path": "data/final_ocr_atlas_wob_fast/test_pairs_ref_nocom_clean_ocr_atlas.parquet",
+      "positive_rows_after_cleaning": 146185,
+      "preserved_label0_rows": 91745,
+      "removed": {
+        "generation_failed": 0,
+        "invalid_label": 0,
+        "label0_same_after_cleaning": 0,
+        "label1_blank_or_missing_name": 0,
+        "label1_duplicate_generated_rows": 66,
+        "label1_same_after_cleaning": 0,
+        "ocr_correct_positive_rows": 0
+      },
+      "split": "test",
+      "verification": {
+        "mode": "none",
+        "ocr_correct_remaining": 0,
+        "ocr_correct_removed": 0,
+        "ocr_correct_verified": 0,
+        "ocr_retry": {
+          "candidate_limit": 0,
+          "candidate_names_ocr_checked": 0,
+          "enabled": false,
+          "initial_exact_matches": 0,
+          "rows_recovered": 0,
+          "rows_unrecovered": 0,
+          "unique_candidate_names_ocr_checked": 0
+        },
+        "verified_positive_rows": 0,
+        "verified_unique_names": 0
+      },
+      "verify_mode": "none"
+    },
+    "train_pairs_ref_clean.parquet": {
+      "accepted_positive_rows_before_ocr_filter": 554143,
+      "audit_path": "data/final_ocr_atlas_wob_fast/audit/train_pairs_ref_clean_ocr_atlas_audit.parquet",
+      "final_dot_com_suffix_count": 0,
+      "final_duplicate_rows_count": 0,
+      "final_label_counts": {
+        "0.0": 348615,
+        "1.0": 554143
+      },
+      "final_rows": 902758,
+      "final_same_fraudulent_real_count": 0,
+      "generation_attempts": {
+        "accepted_rows": 554143,
+        "duplicate_rows": 248,
+        "duplicate_total_attempts": 248,
+        "failed_rows": 0,
+        "failed_total_attempts": 0,
+        "max_attempts": 2,
+        "mean_attempts": 1.000005413765039,
+        "p50_attempts": 1.0,
+        "p95_attempts": 1.0,
+        "retry_rate": 5.413765038988131e-06,
+        "rows_needing_retry": 3,
+        "total_attempts": 554146
+      },
+      "input_file": "data/clean_sources/train_pairs_ref_clean.parquet",
+      "input_rows": 903006,
+      "output_path": "data/final_ocr_atlas_wob_fast/train_pairs_ref_clean_ocr_atlas.parquet",
+      "positive_rows_after_cleaning": 554391,
+      "preserved_label0_rows": 348615,
+      "removed": {
+        "generation_failed": 0,
+        "invalid_label": 0,
+        "label0_same_after_cleaning": 0,
+        "label1_blank_or_missing_name": 0,
+        "label1_duplicate_generated_rows": 248,
+        "label1_same_after_cleaning": 0,
+        "ocr_correct_positive_rows": 0
+      },
+      "split": "train",
+      "verification": {
+        "mode": "none",
+        "ocr_correct_remaining": 0,
+        "ocr_correct_removed": 0,
+        "ocr_correct_verified": 0,
+        "ocr_retry": {
+          "candidate_limit": 0,
+          "candidate_names_ocr_checked": 0,
+          "enabled": false,
+          "initial_exact_matches": 0,
+          "rows_recovered": 0,
+          "rows_unrecovered": 0,
+          "unique_candidate_names_ocr_checked": 0
+        },
+        "verified_positive_rows": 0,
+        "verified_unique_names": 0
+      },
+      "verify_mode": "none"
+    },
+    "validate_pairs_ref_10k_clean.parquet": {
+      "accepted_positive_rows_before_ocr_filter": 6214,
+      "audit_path": "data/final_ocr_atlas_wob_fast/audit/validate_pairs_ref_10k_clean_ocr_atlas_audit.parquet",
+      "final_dot_com_suffix_count": 0,
+      "final_duplicate_rows_count": 0,
+      "final_label_counts": {
+        "0.0": 3571,
+        "1.0": 6214
+      },
+      "final_rows": 9785,
+      "final_same_fraudulent_real_count": 0,
+      "generation_attempts": {
+        "accepted_rows": 6214,
+        "duplicate_rows": 0,
+        "duplicate_total_attempts": 0,
+        "failed_rows": 0,
+        "failed_total_attempts": 0,
+        "max_attempts": 1,
+        "mean_attempts": 1.0,
+        "p50_attempts": 1.0,
+        "p95_attempts": 1.0,
+        "retry_rate": 0.0,
+        "rows_needing_retry": 0,
+        "total_attempts": 6214
+      },
+      "input_file": "data/clean_sources/validate_pairs_ref_10k_clean.parquet",
+      "input_rows": 9785,
+      "output_path": "data/final_ocr_atlas_wob_fast/validate_pairs_ref_10k_clean_ocr_atlas.parquet",
+      "positive_rows_after_cleaning": 6214,
+      "preserved_label0_rows": 3571,
+      "removed": {
+        "generation_failed": 0,
+        "invalid_label": 0,
+        "label0_same_after_cleaning": 0,
+        "label1_blank_or_missing_name": 0,
+        "label1_duplicate_generated_rows": 0,
+        "label1_same_after_cleaning": 0,
+        "ocr_correct_positive_rows": 0
+      },
+      "split": "validation",
+      "verification": {
+        "mode": "none",
+        "ocr_correct_remaining": 0,
+        "ocr_correct_removed": 0,
+        "ocr_correct_verified": 0,
+        "ocr_retry": {
+          "candidate_limit": 0,
+          "candidate_names_ocr_checked": 0,
+          "enabled": false,
+          "initial_exact_matches": 0,
+          "rows_recovered": 0,
+          "rows_unrecovered": 0,
+          "unique_candidate_names_ocr_checked": 0
+        },
+        "verified_positive_rows": 0,
+        "verified_unique_names": 0
+      },
+      "verify_mode": "none"
+    }
+  },
+  "generation_strategy": "multi_char_then_low_ocr_real_rate",
+  "max_substitutions": 4,
+  "min_substitutions": 2,
+  "min_visual_similarity": 0.9,
+  "ocr_model_name": "microsoft/trocr-small-printed",
+  "ocr_retry_candidates": 0,
+  "safe_hard_threshold": 0.2,
+  "seed": 20260602,
+  "verify_eval": "none",
+  "verify_train": "none"
+}

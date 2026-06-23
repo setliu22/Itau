@@ -1,0 +1,121 @@
+{
+  "accepted_positive_rows_before_ocr_filter": 623,
+  "final_dot_com_suffix_count": 0,
+  "final_duplicate_rows_count": 0,
+  "final_label_counts": {
+    "0.0": 371,
+    "1.0": 108
+  },
+  "final_rows": 479,
+  "final_same_fraudulent_real_count": 0,
+  "generation_attempts": {
+    "accepted_rows": 623,
+    "duplicate_rows": 5,
+    "duplicate_total_attempts": 5,
+    "failed_rows": 1,
+    "failed_total_attempts": 80,
+    "max_attempts": 1,
+    "mean_attempts": 1.0,
+    "p50_attempts": 1.0,
+    "p95_attempts": 1.0,
+    "retry_rate": 0.0,
+    "rows_needing_retry": 0,
+    "total_attempts": 623
+  },
+  "input_file": "data/clean_sources/validate_pairs_ref_10k_clean.parquet",
+  "input_rows": 1000,
+  "positive_rows_after_cleaning": 629,
+  "preserved_label0_rows": 371,
+  "removed": {
+    "constrained_candidate_failures": 515,
+    "generation_failed": 1,
+    "invalid_label": 0,
+    "label0_same_after_cleaning": 0,
+    "label1_blank_or_missing_name": 0,
+    "label1_duplicate_generated_rows": 5,
+    "label1_same_after_cleaning": 0,
+    "ocr_correct_positive_rows": 42
+  },
+  "verification": {
+    "adversarial_selection": {
+      "alternatives_generated": 40522,
+      "alternatives_selected": 578,
+      "candidate_limit": 64,
+      "candidate_pairs_legit_checked": 4894,
+      "character_checked_by_model": {
+        "microsoft/trocr-base-handwritten": 41145,
+        "microsoft/trocr-small-printed": 41145
+      },
+      "character_exact_ocr_after": 70,
+      "clean_names_checked_by_model": {
+        "microsoft/trocr-base-handwritten": 584,
+        "microsoft/trocr-small-printed": 584
+      },
+      "constraint_candidate_counts": {
+        "all_character_ocr": 32409,
+        "all_whole_word_ocr": 25943,
+        "clean_ocr": 10566,
+        "legit_feasible": 4330,
+        "pre_legit_feasible": 4894,
+        "text_and_family": 32409
+      },
+      "constraint_feasible_selected": 108,
+      "constraint_row_counts": {
+        "all_character_ocr": 549,
+        "all_whole_word_ocr": 496,
+        "clean_ocr": 166,
+        "legit_feasible": 108,
+        "pre_legit_feasible": 110,
+        "text_and_family": 549
+      },
+      "development_ocr_models": [
+        "microsoft/trocr-small-printed",
+        "microsoft/trocr-base-handwritten"
+      ],
+      "enabled": true,
+      "max_ocr_exact_match_rate": 0.0,
+      "max_text_ensemble_score": 0.75,
+      "mean_selected_legit_score": 1.259064093739106,
+      "mean_selected_raw_text_score": 0.5239106449806076,
+      "mean_selected_worst_ocr_text_score": 0.8996233574739282,
+      "min_clean_ocr_exact_match_rate": 0.25,
+      "min_identity_substitutions": 1,
+      "min_legit_score": 0.0,
+      "min_ocr_confusable_substitutions": 1,
+      "min_ocr_exact_match_rate": 1.0,
+      "model_aware_combination_limit": 128,
+      "model_aware_combination_rows": 400,
+      "model_aware_combinations_generated": 9915,
+      "positive_rows": 623,
+      "render_variant_mode": "robust",
+      "render_variants_per_candidate": 4,
+      "require_clean_ocr_recovery": true,
+      "selection_goal": "attack-both",
+      "unique_candidate_names_character_checked": 41145,
+      "unique_candidate_names_ocr_checked": 32409,
+      "unique_candidate_names_whole_word_checked": 32409,
+      "whole_word_checked_by_model": {
+        "microsoft/trocr-base-handwritten": 29719,
+        "microsoft/trocr-small-printed": 32409
+      },
+      "whole_word_exact_ocr_after": 42,
+      "whole_word_exact_ocr_before": 75
+    },
+    "constrained_candidate_failures_removed": 515,
+    "mode": "all",
+    "ocr_correct_remaining": 0,
+    "ocr_correct_removed": 42,
+    "ocr_correct_verified": 75,
+    "ocr_retry": {
+      "candidate_limit": 0,
+      "candidate_names_ocr_checked": 0,
+      "enabled": false,
+      "initial_exact_matches": 42,
+      "rows_recovered": 0,
+      "rows_unrecovered": 42,
+      "unique_candidate_names_ocr_checked": 0
+    },
+    "verified_positive_rows": 623,
+    "verified_unique_names": 623
+  }
+}

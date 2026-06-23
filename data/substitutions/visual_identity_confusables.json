@@ -1,0 +1,92 @@
+[
+  {
+    "real_span": "a",
+    "candidate_codepoint": "U+0430",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "a",
+    "candidate_codepoint": "U+03B1",
+    "operation": "visual_identity_greek",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "c",
+    "candidate_codepoint": "U+0441",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "e",
+    "candidate_codepoint": "U+0435",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "i",
+    "candidate_codepoint": "U+0456",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "j",
+    "candidate_codepoint": "U+0458",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "l",
+    "candidate_codepoint": "U+04CF",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "o",
+    "candidate_codepoint": "U+043E",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "o",
+    "candidate_codepoint": "U+03BF",
+    "operation": "visual_identity_greek",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "p",
+    "candidate_codepoint": "U+0440",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "p",
+    "candidate_codepoint": "U+03C1",
+    "operation": "visual_identity_greek",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "s",
+    "candidate_codepoint": "U+0455",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "x",
+    "candidate_codepoint": "U+0445",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "x",
+    "candidate_codepoint": "U+03C7",
+    "operation": "visual_identity_greek",
+    "source": "curated_unicode_confusable"
+  },
+  {
+    "real_span": "y",
+    "candidate_codepoint": "U+0443",
+    "operation": "visual_identity_cyrillic",
+    "source": "curated_unicode_confusable"
+  }
+]

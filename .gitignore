@@ -1,0 +1,11 @@
+.cache/
+.venv/
+logs/
+.DS_Store
+__pycache__/
+*.pyc
+*.out
+*.err
+data/raw/
+data/processed/
+*.parquet

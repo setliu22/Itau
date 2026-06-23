@@ -1,0 +1,18 @@
+{
+  "final_label_counts": {
+    "0.0": 91745,
+    "1.0": 102969
+  },
+  "final_rows": 194714,
+  "input_file": "data/final_ocr_atlas_wob_fast/test_pairs_ref_nocom_clean_ocr_atlas.parquet",
+  "input_label_counts": {
+    "0.0": 91745,
+    "1.0": 146119
+  },
+  "input_rows": 237864,
+  "max_label1_score": 5.049219608306885,
+  "mean_label1_score": 0.9720069766044617,
+  "min_label1_score": -3.4315154552459717,
+  "removed_label1_low_legit_score": 43150,
+  "scored_label1_rows": 146119
+}
