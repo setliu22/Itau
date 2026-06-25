@@ -1,11 +1,16 @@
-.cache/
 .venv/
+.cache/
 logs/
-.DS_Store
 __pycache__/
 *.pyc
-*.out
-*.err
+.DS_Store
+outputs/
+
+# Keep only the curated reviewed parquet in the synthetic dataset area.
+Synthetic Dataset/datasets/*
+!Synthetic Dataset/datasets/ocr_confusable_legit_reviewed.parquet
+# Local generated artifacts and cached experiment outputs
 data/raw/
-data/processed/
-*.parquet
+data/splits/
+notebooks/.ipynb_checkpoints/
+synth_dataset/models/LEGIT-TrOCR-MT/
