@@ -1,22 +1,14 @@
-# Local caches and Python bytecode
+large_dataset/
+NEW_RESULTS/
+logs/
 .cache/
-__pycache__/
-**/__pycache__/
-*.pyc
-
-# Slurm/runtime logs
-outputs/slurm/
 *.out
 *.err
-
-# Duplicate tabular exports; parquet/text outputs are canonical here.
-datasets/*.csv
-
-# Debug/intermediate candidate-generation outputs.
-outputs/replacement_candidates/*.parquet
-outputs/replacement_candidates/*.json
-
-# Rebuildable legacy OCR scratch artifacts.
-datasets/dejavu_sans_trocr.hdf
-datasets/dejavu_trocr_white_on_black_confusion_atlas.parquet
-datasets/dejavu_trocr_white_on_black_confusion_atlas.manifest.json
+*.pt
+*.parquet
+*.csv
+*.png
+*.json
+*.pkl
+__pycache__/
+*.pyc

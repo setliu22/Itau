@@ -1,0 +1,28 @@
+Current objective:
+Build the large balanced spoof dataset, validation comparison, and three reused fine-grained-homoglyph model runs requested by the user.
+
+Last confirmed scheduler state:
+Slurm job 16640939 failed after dataset generation during validation evaluation because bare python3 loaded CPU-only torch and --device cuda crashed with "Torch not compiled with CUDA enabled".
+CUDA probe job 16641558 confirmed /home/setliu22/.conda/envs/itau/bin/python has torch 2.6.0+cu124 with CUDA available.
+Corrected resume job 16641622 failed because conda Matplotlib loaded the system /lib64/libstdc++.so.6, which lacked CXXABI_1.3.15.
+Preflight job 16642167 completed successfully after adding CONDA_PREFIX/lib to LD_LIBRARY_PATH and using the home Hugging Face cache.
+Validation analysis job 16642255 and Conv1D baseline model job 16642259 were last seen RUNNING on node4501.
+Conv1D baseline job 16642259 completed epoch 1/20 with val_auc=0.8637921784356872 and wrote NEW_RESULTS/conv1d_baseline/best.pt.
+Conv1D+BiLSTM job 16642261 is pending on afterok:16642259.
+Conv1D+Transformer job 16642274 is pending on afterok:16642261.
+
+Expected outputs:
+DONOTDELETE/dejavu_sans_exact_lookalike_lookup.parquet
+large_dataset/ONEBIGFILE.parquet
+large_dataset/BETTER_TRAIN.parquet
+large_dataset/BETTER_TEST.parquet
+large_dataset/BETTER_VALIDATION.parquet
+large_dataset/FINALVALIDATIONCOMPARISON.txt
+NEW_RESULTS/model_run_manifest.json
+
+Next concrete step:
+Check `squeue -j 16642255,16642259,16642261,16642274 -o '%i %T %M %D %R'`.
+Inspect logs/large-spoof-valid-16642255.{out,err} and logs/large-spoof-model-16642259.{out,err} first.
+
+Open blockers:
+GitHub publish was not completed. `gh` is now available at /home/setliu22/.conda/envs/itau/bin/gh, version 2.95.0, and can be called by direct path even if the conda env was not activated before Codex started. Current gh auth for account setliu22 is invalid in /home/setliu22/.config/gh/hosts.yml; refresh with `/home/setliu22/.conda/envs/itau/bin/gh auth refresh -h github.com`. GitHub connector branch creation failed with 403 for both hailbee/Itau-group-2 and setliu22/Itau. The cluster's Git HTTPS helper is known broken due missing libidn.so.11, and the user said not to use HTTPS or SSH Git from this environment.
