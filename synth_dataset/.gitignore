@@ -17,6 +17,15 @@ NEW_RESULTS/
 NEW_RESULTS_Q25/
 validation_generation_q25/
 validation_optuna_study/
+generate_validation/runs/
+
+# Protected local dataset folders. Keep README guards, never commit data files.
+BASE_DATASETS_DO_NOT_EVER_DELETE/*
+!BASE_DATASETS_DO_NOT_EVER_DELETE/README.md
+NEW_DATASETS_DO_NOT_EVER_DELETE/*
+!NEW_DATASETS_DO_NOT_EVER_DELETE/README.md
+LOOKUP_TABLE_DO_NOT_DELETE_FOR_NOW/*
+!LOOKUP_TABLE_DO_NOT_DELETE_FOR_NOW/README.md
 
 # Model/checkpoint artifacts.
 *.pt

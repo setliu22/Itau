@@ -1,0 +1,84 @@
+Original current-generation instructions preserved for future Codex sessions.
+
+I put the original test, train, and validate datasets in the folder
+BASE_DATASETS_DO_NOT_EVER_DELETE. You can NEVER modify these files in the
+future from the codex environment, only I can choose to delete on my own
+manually. Once you are done writing the new train, test, and validate files,
+put them in NEW_DATASETS_DO_NOT_EVER_DELETE.
+
+The goal for this project is to replace ALL rows with label 1 with a NEW
+fraudulent_name, keeping the real name. Set up a system to, for each real name,
+count the number of instances of label 1 in each file. After generating new
+positive examples, replace 1:1 with the new generated data. So if real_name
+google has 3 instances in validate, 3 new positive label-1 instances should go
+to google.
+
+Run Optuna trials to optimize:
+
+1. Keep LEGIT score high, measured only on positive examples.
+2. Keep Random Forest classifier ROC AUC toward 0.5 using a 90:10 split. There
+   is no need to keep real names separate for text-distance metrics.
+
+Run exactly 50 trials on all 9,999 validation examples. Keep negatives exactly
+how they are and only replace positive rows. When replacing positive rows,
+ensure that across all three files there are no duplicate fraudulent_names.
+
+Optimize a range of possible change values and the randomization/skew of the
+number of changes actually implemented. Replace the fixed character replacement
+range with a length-aware percentage approach. Words should be grouped into
+short, medium, and long categories. Short words should use a small fixed number
+of replacements, while medium and long words should use a sampled percentage of
+the word length. The sampled percentage should come from a configurable range
+and can be skewed toward the lower end, middle, or higher end. Convert the
+percentage into an integer replacement count by rounding, then cap the result
+so it never exceeds the number of replaceable characters in the word. For
+example, a 10-character word with a replacement range of 30% to 50% would
+receive between 3 and 5 replacements, with values closer to 5 sampled more
+frequently. Word length thresholds, percentage ranges, minimum replacement
+count, maximum replacement cap, and sampling skew are configurable
+hyperparameters.
+
+Move old lookup-table work to LOOKUP_TABLE_DO_NOT_DELETE_FOR_NOW. Create
+LOOKUP_TABLE_IN_USE with the approved OCR confusable swaps and the visually
+identical/lookalike swaps. Use random adjacent swaps, random OCR-confusable
+characters, random lookalike characters, etc. If a generated row does not
+surpass LEGIT threshold 4, generate another attempt. If that does not pass,
+generate another attempt. If all 3 do not pass, keep the row with the highest
+LEGIT score. Do not keep trying infinitely. After generating the random final
+change amounts, all three attempts should keep those values fixed.
+
+If an Optuna trial has LEGIT score lower than 4, it should be treated as failing
+the quality gate. Optuna should push LEGIT above 4 and try to push RF ROC AUC
+below 0.75 or lower.
+
+Make sure Optuna does not unfairly exclude parameters based on a single outlier
+trial. Remember the order of operations and that swaps always go first. Only do
+swaps if length is greater than or equal to 8. Swaps should not undo themselves
+if multiple swaps are allowed. First designate which characters are being
+replaced with what so later replacement steps do not overwrite earlier steps.
+Similarly, do not undo steps such as a forward multicharacter substitution
+followed by a reverse multicharacter substitution.
+
+Set and save fixed seeds for Optuna, spoof generation, train-test splitting,
+and representative-example sampling.
+
+Require every generated fraudulent_name to differ from its real_name, remain
+unique after Unicode normalization and case normalization, and not duplicate any
+existing or newly generated spoof. Make sure no names contain .com.
+
+Copy any useful existing code. Delete files no longer necessary for this
+project, including older confusion matrices and stale outputs, after preserving
+valuable code for future train/test generation and model runs.
+
+Focus first on generating a final new 9,999-row validation dataset in
+NEW_DATASETS_DO_NOT_EVER_DELETE. Move DONOTDELETEFINALCOMPARISON.py into a
+folder called generate_validation and rename it final_comparison.py. It should
+generate final metrics and random representative examples of new spoofs with
+LEGIT values before and after calculated. If results look promising, later use
+the same parameters to generate train and test and run the three models.
+
+Leave negatives alone. If label is 0, there is no need to generate a
+replacement.
+
+When future train and test generation is requested, never have duplicate
+positive rows across all three files.
