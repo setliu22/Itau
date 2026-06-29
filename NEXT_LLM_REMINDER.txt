@@ -3,7 +3,9 @@ Current objective: run the Q25-based validation-generation Optuna experiment in 
 Last confirmed jobs:
 - Smoke job 16757336 completed successfully with exit code 0. Log: logs/valid-q25-smoke-16757336.out
 - Smoke job 16757632 completed successfully with exit code 0 after the integrity-check patch. Log: logs/valid-q25-smoke-16757632.out
-- Main Optuna job 16757376 was submitted on mit_preemptable with A100 GRES and had its time limit reduced to 08:00:00. It was preempted once and requeued; check current Slurm state before resuming decisions. Logs: logs/valid-q25-optuna-16757376.out and logs/valid-q25-optuna-16757376.err
+- Main Optuna job 16757376 was running on node4309 as of the latest check, elapsed 00:30:48 with 07:29:12 wall time left. Logs: logs/valid-q25-optuna-16757376.out and logs/valid-q25-optuna-16757376.err
+- Downstream full dataset/model job 16759326 was submitted with dependency `afterok:16757376`; it remains PENDING (Dependency) until Optuna succeeds. Logs will be logs/q25-ds-models-16759326.out and logs/q25-ds-models-16759326.err.
+- Compile check job 16759394 completed successfully with exit code 0 for DONOTDELETEFINALCOMPARISON.py and downstream scripts.
 
 Active code/artifacts:
 - scripts/build_q25_lookups.py
@@ -16,12 +18,13 @@ Active code/artifacts:
 - scripts/run_validation_optuna.sh
 - scripts/build_q25_large_dataset.py
 - scripts/slurm_q25_large_dataset_and_models.sbatch
+- DONOTDELETEFINALCOMPARISON.py
 - Output directory: validation_generation_q25/
 
 Next concrete step:
 - Check `squeue -j 16757376 -o '%i %T %M %R'` and `sacct -j 16757376 --format=JobID,State,ExitCode,Elapsed,NodeList -P`; inspect logs if it fails or is not requeued.
 - On success, read `validation_generation_q25/FINAL_Q25_OPTUNA_REPORT.txt`, `selected_configuration.json`, `trial_results.csv`, `pareto_frontier.csv`, and `full_selected/full_metrics.json`.
-- After `selected_configuration.json` exists, submit `scripts/slurm_q25_large_dataset_and_models.sbatch` to build `large_dataset_q25/` and run the three external model evaluations into `NEW_RESULTS_Q25/`.
+- If Optuna succeeds, job 16759326 should automatically build `large_dataset_q25/`, write `large_dataset_q25/FINALVALIDATIONCOMPARISON.txt`, write `large_dataset_q25/DONOTDELETEFINALCOMPARISON.txt`, and run the three external model evaluations into `NEW_RESULTS_Q25/`.
 
 Notes:
 - The production adjacent lookup in DONOTDELETE is best-by-LEGIT but only contains `real_name, swapped_name`; score columns were not preserved by the earlier DONOTDELETE job. The new adjacent loader uses stored scores when present and otherwise treats the preselected pair as the best available adjacent rule.

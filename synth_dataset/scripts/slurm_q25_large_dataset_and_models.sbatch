@@ -2,7 +2,7 @@
 #SBATCH --job-name=q25-ds-models
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
-#SBATCH --time=48:00:00
+#SBATCH --time=12:00:00
 #SBATCH --partition=mit_preemptable
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G
@@ -40,6 +40,7 @@ do
 done
 
 "$PYTHON" -m py_compile \
+  DONOTDELETEFINALCOMPARISON.py \
   scripts/build_q25_large_dataset.py \
   scripts/evaluate_large_dataset_validation.py \
   scripts/train_large_dataset_models.py
@@ -55,6 +56,12 @@ done
   --output-dir large_dataset_q25/validation_analysis \
   --final-text large_dataset_q25/FINALVALIDATIONCOMPARISON.txt \
   --device cuda
+
+"$PYTHON" DONOTDELETEFINALCOMPARISON.py \
+  --generated-validation large_dataset_q25/BETTER_VALIDATION.parquet \
+  --original-validation inputs/validate_pairs_ref_10k.parquet \
+  --metrics-json large_dataset_q25/validation_analysis/validation_comparison_metrics.json \
+  --output large_dataset_q25/DONOTDELETEFINALCOMPARISON.txt
 
 "$PYTHON" scripts/train_large_dataset_models.py \
   --train large_dataset_q25/BETTER_TRAIN.parquet \
