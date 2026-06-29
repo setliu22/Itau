@@ -12,7 +12,7 @@ import time
 import unicodedata
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -68,6 +68,16 @@ class MultiRule:
     replacement: str
     direction: str
     operation: str
+    score: float = 0.0
+
+
+@dataclass(frozen=True)
+class AdjacentRule:
+    real_name: str
+    swapped_name: str
+    swap_i: int
+    swap_j: int
+    score: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -81,6 +91,11 @@ class CountPlan:
     length_bucket: str
     sampled_percentage: float | None
     replaceable_characters: int
+    adjacent_temperature: float = 0.0
+    multichar_forward_temperature: float = 0.0
+    multichar_reverse_temperature: float = 0.0
+    ocr_temperature: float = 0.0
+    exact_temperature: float = 0.0
 
 
 @dataclass
@@ -176,58 +191,109 @@ def load_registry_keys(path: Path) -> set[str]:
     return {uniqueness_key(value) for value in frame["fraudulent_name"] if uniqueness_key(value)}
 
 
-def load_char_lookup(path: Path) -> dict[str, list[str]]:
-    frame = pd.read_csv(path)
-    required = {"source_character", "replacement_character"}
+def safe_score(value: Any, *, default: float = 0.0) -> float:
+    try:
+        if value is None or pd.isna(value):
+            return float(default)
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def load_scored_character_rules(
+    *,
+    q25_path: Path,
+    fallback_csv: Path,
+) -> dict[str, list[dict[str, Any]]]:
+    if q25_path.exists():
+        frame = pd.read_parquet(q25_path)
+        source_col = "source" if "source" in frame.columns else "source_character"
+        replacement_col = "replacement" if "replacement" in frame.columns else "replacement_character"
+        score_col = "LEGIT_q25" if "LEGIT_q25" in frame.columns else "legit_q25"
+    else:
+        frame = pd.read_csv(fallback_csv)
+        source_col = "source_character"
+        replacement_col = "replacement_character"
+        score_col = "legit_q25" if "legit_q25" in frame.columns else "generation_score"
+    required = {source_col, replacement_col}
     missing = required - set(frame.columns)
     if missing:
-        raise ValueError(f"{path} missing columns: {sorted(missing)}")
-    lookup: dict[str, list[str]] = {}
-    for row in frame[["source_character", "replacement_character"]].itertuples(index=False):
-        source = str(row.source_character)
-        replacement = str(row.replacement_character)
+        raise ValueError(f"Character lookup missing columns: {sorted(missing)}")
+    if "meets_min_support" in frame.columns:
+        supported = frame[frame["meets_min_support"].astype(bool)].copy()
+        if not supported.empty:
+            frame = supported
+    lookup: dict[str, list[dict[str, Any]]] = {}
+    for row in frame.itertuples(index=False):
+        payload = row._asdict()
+        source = str(payload[source_col])
+        replacement = str(payload[replacement_col])
         if len(source) != 1 or len(replacement) != 1 or source == replacement:
             continue
+        score = safe_score(payload.get(score_col), default=0.0) if score_col in payload else 0.0
+        entry = {
+            "source": source,
+            "replacement": replacement,
+            "score": float(score),
+            "operation": str(payload.get("operation") or f"{source}_to_{replacement}"),
+        }
         lookup.setdefault(source, [])
-        if replacement not in lookup[source]:
-            lookup[source].append(replacement)
+        if not any(existing["replacement"] == replacement for existing in lookup[source]):
+            lookup[source].append(entry)
+    for entries in lookup.values():
+        entries.sort(key=lambda item: (-float(item["score"]), item["replacement"]))
     return lookup
 
 
 def default_multichar_rules() -> tuple[list[MultiRule], list[MultiRule]]:
     forward = [
-        MultiRule("m", "rn", "forward", "m_to_rn"),
-        MultiRule("w", "vv", "forward", "w_to_vv"),
-        MultiRule("d", "cl", "forward", "d_to_cl"),
+        MultiRule("m", "rn", "forward", "m_to_rn", 0.0),
+        MultiRule("w", "vv", "forward", "w_to_vv", 0.0),
+        MultiRule("d", "cl", "forward", "d_to_cl", 0.0),
     ]
     reverse = [
-        MultiRule(rule.replacement, rule.source, "reverse", f"{rule.replacement}_to_{rule.source}")
+        MultiRule(rule.replacement, rule.source, "reverse", f"{rule.replacement}_to_{rule.source}", 0.0)
         for rule in forward
     ]
     return forward, reverse
 
 
-def load_multichar_rules(path: Path | None = None) -> tuple[list[MultiRule], list[MultiRule]]:
+def load_multichar_rules(path: Path | None = None, *, direction: str = "forward") -> list[MultiRule]:
     if path is None or not path.exists():
-        return default_multichar_rules()
+        return default_multichar_rules()[0 if direction == "forward" else 1]
     frame = pd.read_csv(path) if path.suffix.lower() == ".csv" else pd.read_parquet(path)
     source_col = "source" if "source" in frame.columns else "source_span"
     replacement_col = "replacement" if "replacement" in frame.columns else "replacement_span"
     if source_col not in frame.columns or replacement_col not in frame.columns:
-        return default_multichar_rules()
-    forward: list[MultiRule] = []
-    for row in frame[[source_col, replacement_col]].dropna().itertuples(index=False):
-        source = str(row[0])
-        replacement = str(row[1])
-        if source and replacement and source != replacement and len(source) != len(replacement):
-            forward.append(MultiRule(source, replacement, "forward", f"{source}_to_{replacement}"))
-    if not forward:
-        return default_multichar_rules()
-    reverse = [
-        MultiRule(rule.replacement, rule.source, "reverse", f"{rule.replacement}_to_{rule.source}")
-        for rule in forward
-    ]
-    return dedupe_rules(forward), dedupe_rules(reverse)
+        return default_multichar_rules()[0 if direction == "forward" else 1]
+    if "meets_min_support" in frame.columns:
+        supported = frame[frame["meets_min_support"].astype(bool)].copy()
+        if not supported.empty:
+            frame = supported
+    score_col = "LEGIT_q25" if "LEGIT_q25" in frame.columns else "legit_q25"
+    rules: list[MultiRule] = []
+    for row in frame.itertuples(index=False):
+        payload = row._asdict()
+        source = str(payload[source_col])
+        replacement = str(payload[replacement_col])
+        if not source or not replacement or source == replacement:
+            continue
+        row_direction = str(payload.get("direction") or direction)
+        if row_direction != direction:
+            continue
+        score = safe_score(payload.get(score_col), default=0.0) if score_col in payload else 0.0
+        rules.append(
+            MultiRule(
+                source,
+                replacement,
+                direction,
+                str(payload.get("operation") or f"{source}_to_{replacement}"),
+                float(score),
+            )
+        )
+    if not rules:
+        return default_multichar_rules()[0 if direction == "forward" else 1]
+    return dedupe_rules(rules)
 
 
 def dedupe_rules(rules: list[MultiRule]) -> list[MultiRule]:
@@ -239,15 +305,80 @@ def dedupe_rules(rules: list[MultiRule]) -> list[MultiRule]:
             continue
         seen.add(key)
         result.append(rule)
+    result.sort(key=lambda rule: (rule.source, -float(rule.score), rule.replacement))
     return result
+
+
+def infer_swap_indices(real_name: str, swapped_name: str) -> tuple[int, int] | None:
+    if len(real_name) != len(swapped_name) or real_name == swapped_name:
+        return None
+    diffs = [idx for idx, (left, right) in enumerate(zip(real_name, swapped_name)) if left != right]
+    if len(diffs) != 2:
+        return None
+    i, j = diffs
+    if j != i + 1 or i < 2:
+        return None
+    if real_name[i] == swapped_name[j] and real_name[j] == swapped_name[i]:
+        return i, j
+    return None
+
+
+def load_adjacent_lookup(lookup_dir: Path) -> dict[str, list[AdjacentRule]]:
+    candidates = [
+        lookup_dir / "adjacent_swap_scored_lookup.parquet",
+        SYNTH_ROOT / "DONOTDELETE" / "best_legit_adjacent_swap_lookup_no_single_char_hyphen_prefix.parquet",
+    ]
+    path = next((candidate for candidate in candidates if candidate.exists()), None)
+    if path is None:
+        return {}
+    frame = pd.read_parquet(path)
+    if not {"real_name", "swapped_name"}.issubset(frame.columns):
+        return {}
+    score_col = "LEGIT_score" if "LEGIT_score" in frame.columns else "legit_score"
+    lookup: dict[str, list[AdjacentRule]] = {}
+    for row in frame.itertuples(index=False):
+        payload = row._asdict()
+        real_name = clean_project_name(payload["real_name"])
+        swapped_name = clean_project_name(payload["swapped_name"])
+        if not real_name or not swapped_name:
+            continue
+        if "swap_i" in payload and "swap_j" in payload:
+            swap_i, swap_j = int(payload["swap_i"]), int(payload["swap_j"])
+        else:
+            inferred = infer_swap_indices(real_name, swapped_name)
+            if inferred is None:
+                continue
+            swap_i, swap_j = inferred
+        if swap_i < 2:
+            continue
+        score = safe_score(payload.get(score_col), default=0.0) if score_col in payload else 0.0
+        lookup.setdefault(real_name, []).append(
+            AdjacentRule(real_name, swapped_name, swap_i, swap_j, float(score))
+        )
+    for rules in lookup.values():
+        rules.sort(key=lambda rule: (-float(rule.score), rule.swap_i, rule.swap_j, rule.swapped_name))
+    return lookup
 
 
 def load_lookups(lookup_dir: Path) -> dict[str, Any]:
     return {
-        "ocr": load_char_lookup(lookup_dir / "ocr_confusable_approved.csv"),
-        "exact": load_char_lookup(lookup_dir / "exact_lookalike_approved.csv"),
-        "multichar_forward": load_multichar_rules()[0],
-        "multichar_reverse": load_multichar_rules()[1],
+        "adjacent": load_adjacent_lookup(lookup_dir),
+        "ocr": load_scored_character_rules(
+            q25_path=lookup_dir / "ocr_q25_lookup.parquet",
+            fallback_csv=lookup_dir / "ocr_confusable_approved.csv",
+        ),
+        "exact": load_scored_character_rules(
+            q25_path=lookup_dir / "exact_q25_lookup.parquet",
+            fallback_csv=lookup_dir / "exact_lookalike_approved.csv",
+        ),
+        "multichar_forward": load_multichar_rules(
+            lookup_dir / "multichar_forward_q25_lookup.parquet",
+            direction="forward",
+        ),
+        "multichar_reverse": load_multichar_rules(
+            lookup_dir / "multichar_reverse_q25_lookup.parquet",
+            direction="reverse",
+        ),
     }
 
 
@@ -264,6 +395,24 @@ def sample_attempt_count(max_count: int, probability: float, rng: np.random.Gene
     if probability >= 1.0:
         return max_count
     return int(rng.binomial(max_count, probability))
+
+
+def score_weights(scores: list[float], temperature: float) -> np.ndarray:
+    if not scores:
+        return np.empty((0,), dtype=float)
+    if float(temperature) <= 0.0:
+        best = max(float(score) for score in scores)
+        weights = np.array([1.0 if math.isclose(float(score), best) else 0.0 for score in scores], dtype=float)
+        return weights / weights.sum()
+    values = np.asarray(scores, dtype=float)
+    shifted = (values - float(values.max())) / float(temperature)
+    weights = np.exp(shifted)
+    return weights / weights.sum()
+
+
+def choose_scored_index(scores: list[float], *, temperature: float, rng: np.random.Generator) -> int:
+    weights = score_weights(scores, float(temperature))
+    return int(rng.choice(len(scores), p=weights))
 
 
 def skewed_unit_interval(rng: np.random.Generator, skew: str) -> float:
@@ -399,6 +548,11 @@ def sample_count_plan(
         length_bucket=bucket,
         sampled_percentage=sampled_percentage,
         replaceable_characters=int(replaceable),
+        adjacent_temperature=float(params.get("adjacent_selection_temperature", 0.0)),
+        multichar_forward_temperature=float(params.get("multichar_forward_temperature", 0.0)),
+        multichar_reverse_temperature=float(params.get("multichar_reverse_temperature", 0.0)),
+        ocr_temperature=float(params.get("ocr_selection_temperature", 0.0)),
+        exact_temperature=float(params.get("exact_selection_temperature", 0.0)),
     )
 
 
@@ -429,38 +583,48 @@ def replace_span(units: list[Unit], start: int, width: int, replacement: str) ->
     )
 
 
-def apply_random_adjacent_swaps(
+def apply_adjacent_swaps(
     units: list[Unit],
     *,
+    original_name: str,
+    adjacent_lookup: dict[str, list[AdjacentRule]],
     count: int,
+    temperature: float,
     rng: np.random.Generator,
 ) -> tuple[list[Unit], list[dict[str, Any]]]:
     operations = []
-    if len(units) < 8:
+    if len(units) < 8 or count <= 0:
         return units, operations
     for _ in range(max(0, int(count))):
-        starts = [
-            index
-            for index in range(2, len(units) - 1)
-            if not units[index].modified and not units[index + 1].modified
-        ]
-        if not starts:
+        candidates = []
+        for rule in adjacent_lookup.get(str(original_name), []):
+            if rule.swap_i < 2 or rule.swap_j >= len(units):
+                continue
+            if units[rule.swap_i].modified or units[rule.swap_j].modified:
+                continue
+            if units[rule.swap_i].char != str(original_name)[rule.swap_i]:
+                continue
+            if units[rule.swap_j].char != str(original_name)[rule.swap_j]:
+                continue
+            candidates.append(rule)
+        if not candidates:
             break
-        start = int(starts[int(rng.integers(0, len(starts)))])
+        selected = candidates[choose_scored_index([rule.score for rule in candidates], temperature=temperature, rng=rng)]
         before = units_to_text(units)
-        left = units[start].char
-        right = units[start + 1].char
+        left = units[selected.swap_i].char
+        right = units[selected.swap_j].char
         units = list(units)
-        units[start], units[start + 1] = units[start + 1], units[start]
-        units[start].modified = True
-        units[start + 1].modified = True
+        units[selected.swap_i], units[selected.swap_j] = units[selected.swap_j], units[selected.swap_i]
+        units[selected.swap_i].modified = True
+        units[selected.swap_j].modified = True
         operations.append(
             {
                 "family": "adjacent",
-                "operation": "random_adjacent_swap",
-                "position": start,
+                "operation": "scored_adjacent_swap",
+                "position": int(selected.swap_i),
                 "source": left + right,
                 "replacement": right + left,
+                "score": float(selected.score),
                 "before": before,
                 "after": units_to_text(units),
             }
@@ -468,11 +632,13 @@ def apply_random_adjacent_swaps(
     return units, operations
 
 
-def apply_random_multichar(
+def apply_scored_multichar(
     units: list[Unit],
     *,
     rules: list[MultiRule],
+    family: str,
     count: int,
+    temperature: float,
     rng: np.random.Generator,
 ) -> tuple[list[Unit], list[dict[str, Any]]]:
     operations = []
@@ -484,17 +650,23 @@ def apply_random_multichar(
                 candidates.append((rule, starts))
         if not candidates:
             break
-        rule, starts = candidates[int(rng.integers(0, len(candidates)))]
+        selected_index = choose_scored_index(
+            [rule.score for rule, _ in candidates],
+            temperature=temperature,
+            rng=rng,
+        )
+        rule, starts = candidates[selected_index]
         start = int(starts[int(rng.integers(0, len(starts)))])
         before = units_to_text(units)
         units = replace_span(units, start, len(rule.source), rule.replacement)
         operations.append(
             {
-                "family": f"multichar_{rule.direction}",
+                "family": family,
                 "operation": rule.operation,
                 "position": start,
                 "source": rule.source,
                 "replacement": rule.replacement,
+                "score": float(rule.score),
                 "before": before,
                 "after": units_to_text(units),
             }
@@ -502,76 +674,49 @@ def apply_random_multichar(
     return units, operations
 
 
-def apply_random_char_substitutions(
+def apply_scored_character_substitutions(
     units: list[Unit],
     *,
-    lookup: dict[str, list[str]],
+    lookup: dict[str, list[dict[str, Any]]],
     family: str,
     count: int,
+    temperature: float,
     rng: np.random.Generator,
 ) -> tuple[list[Unit], list[dict[str, Any]]]:
-    candidates = [
-        index
-        for index, unit in enumerate(units)
-        if not unit.modified and unit.char in lookup
-    ]
-    if not candidates or count <= 0:
-        return units, []
-    rng.shuffle(candidates)
-    selected = candidates[: min(int(count), len(candidates))]
-    planned = []
-    for index in selected:
-        source = units[index].char
-        replacements = lookup[source]
-        replacement = replacements[int(rng.integers(0, len(replacements)))]
-        planned.append((index, source, replacement))
-    units = list(units)
     operations = []
-    for index, source, replacement in sorted(planned, key=lambda item: item[0]):
+    for _ in range(max(0, int(count))):
+        candidates: list[tuple[int, dict[str, Any]]] = []
+        for index, unit in enumerate(units):
+            if unit.modified:
+                continue
+            for entry in lookup.get(unit.char, []):
+                candidates.append((index, entry))
+        if not candidates:
+            break
+        selected_index = choose_scored_index(
+            [float(entry.get("score", 0.0)) for _, entry in candidates],
+            temperature=temperature,
+            rng=rng,
+        )
+        index, entry = candidates[selected_index]
         before = units_to_text(units)
+        source = units[index].char
+        replacement = str(entry["replacement"])
+        units = list(units)
         units[index] = Unit(char=replacement, modified=True)
         operations.append(
             {
                 "family": family,
-                "operation": f"random_{family}_substitution",
+                "operation": str(entry.get("operation") or f"{source}_to_{replacement}"),
                 "position": int(index),
                 "source": source,
                 "replacement": replacement,
+                "score": float(entry.get("score", 0.0)),
                 "before": before,
                 "after": units_to_text(units),
             }
         )
     return units, operations
-
-
-def apply_fallback(
-    units: list[Unit],
-    *,
-    lookups: dict[str, Any],
-    rng: np.random.Generator,
-) -> tuple[list[Unit], list[dict[str, Any]]]:
-    before = units_to_text(units)
-    units_after, ops = apply_random_adjacent_swaps(units, count=1, rng=rng)
-    if ops and units_to_text(units_after) != before:
-        ops[0]["fallback"] = True
-        return units_after, ops
-    for family, lookup in (("ocr", lookups["ocr"]), ("exact", lookups["exact"])):
-        units_after, ops = apply_random_char_substitutions(
-            units,
-            lookup=lookup,
-            family=family,
-            count=1,
-            rng=rng,
-        )
-        if ops and units_to_text(units_after) != before:
-            ops[0]["fallback"] = True
-            return units_after, ops
-    for rules in (lookups["multichar_forward"], lookups["multichar_reverse"]):
-        units_after, ops = apply_random_multichar(units, rules=rules, count=1, rng=rng)
-        if ops and units_to_text(units_after) != before:
-            ops[0]["fallback"] = True
-            return units_after, ops
-    return units, []
 
 
 def generate_candidate(
@@ -584,53 +729,122 @@ def generate_candidate(
     rng = np.random.default_rng(int(attempt_seed))
     units = [Unit(char=char) for char in str(real_name)]
     operations: list[dict[str, Any]] = []
-    units, ops = apply_random_adjacent_swaps(units, count=plan.adjacent_swaps, rng=rng)
+    units, ops = apply_adjacent_swaps(
+        units,
+        original_name=real_name,
+        adjacent_lookup=lookups.get("adjacent", {}),
+        count=plan.adjacent_swaps,
+        temperature=float(plan_params_temperature(plan, "adjacent")),
+        rng=rng,
+    )
     operations.extend(ops)
-    units, ops = apply_random_multichar(
+    units, ops = apply_scored_multichar(
         units,
         rules=lookups["multichar_forward"],
+        family="multichar_forward",
         count=plan.multichar_forward,
+        temperature=float(plan_params_temperature(plan, "multichar_forward")),
         rng=rng,
     )
     operations.extend(ops)
-    units, ops = apply_random_multichar(
+    units, ops = apply_scored_multichar(
         units,
         rules=lookups["multichar_reverse"],
+        family="multichar_reverse",
         count=plan.multichar_reverse,
+        temperature=float(plan_params_temperature(plan, "multichar_reverse")),
         rng=rng,
     )
     operations.extend(ops)
-    units, ops = apply_random_char_substitutions(
+    units, ops = apply_scored_character_substitutions(
         units,
         lookup=lookups["ocr"],
         family="ocr",
         count=plan.ocr_substitutions,
+        temperature=float(plan_params_temperature(plan, "ocr")),
         rng=rng,
     )
     operations.extend(ops)
-    units, ops = apply_random_char_substitutions(
+    units, ops = apply_scored_character_substitutions(
         units,
         lookup=lookups["exact"],
         family="exact",
         count=plan.exact_lookalikes,
+        temperature=float(plan_params_temperature(plan, "exact")),
         rng=rng,
     )
     operations.extend(ops)
     generated = units_to_text(units)
-    if generated == real_name or not operations:
-        units, ops = apply_fallback(units, lookups=lookups, rng=rng)
-        operations.extend(ops)
-        generated = units_to_text(units)
     valid = bool(generated != real_name and operations and ".com" not in generated.casefold())
     reason = "" if valid else "unchanged_or_no_valid_operation"
     return Candidate(
         generated=generated,
         operations=operations,
         plan=plan,
-        attempt_index=0,
+        attempt_index=1,
         valid=valid,
         invalid_reason=reason,
     )
+
+
+def plan_params_temperature(plan: CountPlan, family: str) -> float:
+    return float(getattr(plan, f"{family}_temperature", 0.0))
+
+
+def generate_uniqueness_fallback(
+    real_name: str,
+    *,
+    plan: CountPlan,
+    lookups: dict[str, Any],
+    forbidden_keys: set[str],
+    max_variants: int = 256,
+) -> Candidate | None:
+    for variant_index in range(int(max_variants)):
+        rng = np.random.default_rng(stable_seed("fallback", real_name, variant_index))
+        units = [Unit(char=char) for char in str(real_name)]
+        family_order = ["adjacent", "multichar_forward", "multichar_reverse", "ocr", "exact"]
+        family = family_order[variant_index % len(family_order)]
+        operations: list[dict[str, Any]] = []
+        if family == "adjacent":
+            units, operations = apply_adjacent_swaps(
+                units,
+                original_name=real_name,
+                adjacent_lookup=lookups.get("adjacent", {}),
+                count=1,
+                temperature=2.0,
+                rng=rng,
+            )
+        elif family in {"multichar_forward", "multichar_reverse"}:
+            units, operations = apply_scored_multichar(
+                units,
+                rules=lookups[family],
+                family=family,
+                count=1,
+                temperature=2.0,
+                rng=rng,
+            )
+        else:
+            units, operations = apply_scored_character_substitutions(
+                units,
+                lookup=lookups[family],
+                family=family,
+                count=1,
+                temperature=2.0,
+                rng=rng,
+            )
+        generated = units_to_text(units)
+        key = uniqueness_key(generated)
+        if generated != real_name and operations and key not in forbidden_keys and key != uniqueness_key(real_name):
+            for operation in operations:
+                operation["fallback"] = True
+            return Candidate(
+                generated=generated,
+                operations=operations,
+                plan=plan,
+                attempt_index=variant_index + 2,
+                valid=True,
+            )
+    return None
 
 
 def operation_family_counts(operations: list[dict[str, Any]]) -> dict[str, int]:
@@ -677,27 +891,6 @@ def candidate_to_audit(
     }
 
 
-def score_candidates(
-    candidates: list[tuple[int, Candidate]],
-    *,
-    real_names: list[str],
-    legit_scorer: Any,
-    batch_size: int,
-) -> list[tuple[int, Candidate]]:
-    if not candidates:
-        return []
-    pairs = [
-        (candidate.generated, real_names[row_index])
-        for row_index, candidate in candidates
-    ]
-    scores = legit_scorer.score_pairs(pairs, batch_size=int(batch_size)).astype(float)
-    result = []
-    for (row_index, candidate), score in zip(candidates, scores):
-        candidate.legit_score = float(score)
-        result.append((row_index, candidate))
-    return result
-
-
 def generate_positive_replacements(
     *,
     split: str,
@@ -710,7 +903,7 @@ def generate_positive_replacements(
     generation_seed: int,
     trial_number: int | None = None,
     legit_threshold: float = 4.0,
-    max_attempts_per_row: int = 3,
+    max_attempts_per_row: int = 1,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     positives = original_frame.loc[original_frame["label"].eq(1.0)].copy()
     positives = positives.reset_index(drop=False).rename(columns={"index": "original_row_index"})
@@ -723,60 +916,40 @@ def generate_positive_replacements(
     ]
 
     accepted: dict[int, Candidate] = {}
-    candidate_history: dict[int, list[Candidate]] = {idx: [] for idx in range(len(real_names))}
     used_keys = set(forbidden_fraudulent_keys)
     invalid_counts: dict[str, int] = {}
-
-    for attempt in range(int(max_attempts_per_row)):
-        pending = [idx for idx in range(len(real_names)) if idx not in accepted]
-        generated: list[tuple[int, Candidate]] = []
-        for row_index in pending:
-            candidate = generate_candidate(
-                real_names[row_index],
+    fallback_count = 0
+    for row_index, real_name in enumerate(real_names):
+        candidate = generate_candidate(
+            real_name,
+            plan=plans[row_index],
+            lookups=lookups,
+            attempt_seed=stable_seed(generation_seed, split, row_index, "primary"),
+        )
+        key = uniqueness_key(candidate.generated)
+        if (
+            not candidate.valid
+            or key in used_keys
+            or key == uniqueness_key(real_name)
+        ):
+            reason = candidate.invalid_reason or "duplicate_or_same_after_normalization"
+            invalid_counts[reason] = invalid_counts.get(reason, 0) + 1
+            candidate = generate_uniqueness_fallback(
+                real_name,
                 plan=plans[row_index],
                 lookups=lookups,
-                attempt_seed=stable_seed(generation_seed, split, row_index, attempt),
+                forbidden_keys=used_keys | {uniqueness_key(real_name)},
             )
-            candidate.attempt_index = int(attempt + 1)
-            key = uniqueness_key(candidate.generated)
-            if not candidate.valid:
-                invalid_counts[candidate.invalid_reason] = invalid_counts.get(candidate.invalid_reason, 0) + 1
-                continue
-            if key == uniqueness_key(real_names[row_index]):
-                invalid_counts["same_as_real_after_normalization"] = invalid_counts.get("same_as_real_after_normalization", 0) + 1
-                continue
-            if key in forbidden_fraudulent_keys:
-                invalid_counts["duplicates_existing_spoof"] = invalid_counts.get("duplicates_existing_spoof", 0) + 1
-                continue
-            generated.append((row_index, candidate))
-        scored = score_candidates(
-            generated,
-            real_names=real_names,
-            legit_scorer=legit_scorer,
-            batch_size=int(legit_batch_size),
-        )
-        for row_index, candidate in scored:
-            candidate_history[row_index].append(candidate)
-            key = uniqueness_key(candidate.generated)
-            if row_index not in accepted and candidate.legit_score >= float(legit_threshold) and key not in used_keys:
-                accepted[row_index] = candidate
-                used_keys.add(key)
-
-    for row_index in range(len(real_names)):
-        if row_index in accepted:
+            fallback_count += 1
+        if candidate is None:
+            invalid_counts["no_unique_fallback"] = invalid_counts.get("no_unique_fallback", 0) + 1
             continue
-        ranked = sorted(
-            candidate_history[row_index],
-            key=lambda candidate: float(candidate.legit_score),
-            reverse=True,
-        )
-        for candidate in ranked:
-            key = uniqueness_key(candidate.generated)
-            if key in used_keys or key == uniqueness_key(real_names[row_index]):
-                continue
-            accepted[row_index] = candidate
-            used_keys.add(key)
-            break
+        key = uniqueness_key(candidate.generated)
+        if key in used_keys or key == uniqueness_key(real_name):
+            invalid_counts["fallback_duplicate_or_same"] = invalid_counts.get("fallback_duplicate_or_same", 0) + 1
+            continue
+        accepted[row_index] = candidate
+        used_keys.add(key)
 
     failures = [idx for idx in range(len(real_names)) if idx not in accepted]
     if failures:
@@ -784,6 +957,11 @@ def generate_positive_replacements(
             f"Generated no valid positive replacement for {len(failures):,} rows; "
             f"first failed row indices: {failures[:10]}"
         )
+
+    legit_pairs = [(accepted[idx].generated, real_names[idx]) for idx in range(len(real_names))]
+    scores = legit_scorer.score_pairs(legit_pairs, batch_size=int(legit_batch_size)).astype(float)
+    for row_index, score in enumerate(scores):
+        accepted[row_index].legit_score = float(score)
 
     positive_rows = []
     audit_rows = []
@@ -816,6 +994,9 @@ def generate_positive_replacements(
         forbidden_fraudulent_keys=forbidden_fraudulent_keys,
         invalid_counts=invalid_counts,
     )
+    report["fallback_count"] = int(fallback_count)
+    report["legit_threshold"] = float(legit_threshold)
+    report["below_legit_threshold_count"] = int((audit["positive_legit_score"].astype(float) < float(legit_threshold)).sum())
     return positive_frame, audit, report
 
 

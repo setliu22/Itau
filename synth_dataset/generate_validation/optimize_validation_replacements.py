@@ -112,6 +112,11 @@ def suggest_params(trial: Any) -> dict[str, Any]:
         probability_name="exact_apply_probability",
         max_high=6,
     )
+    adjacent_temperature = trial.suggest_categorical("adjacent_selection_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_adjacent > 0 else 0.0
+    forward_temperature = trial.suggest_categorical("multichar_forward_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_forward > 0 else 0.0
+    reverse_temperature = trial.suggest_categorical("multichar_reverse_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_reverse > 0 else 0.0
+    ocr_temperature = trial.suggest_categorical("ocr_selection_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_ocr > 0 else 0.0
+    exact_temperature = trial.suggest_categorical("exact_selection_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_exact > 0 else 0.0
     if max_ocr > 0 and max_exact > 0:
         ocr_share = trial.suggest_float("ocr_share", 0.0, 1.0)
     elif max_ocr > 0:
@@ -133,14 +138,19 @@ def suggest_params(trial: Any) -> dict[str, Any]:
     return {
         "max_adjacent_swaps": max_adjacent,
         "adjacent_apply_probability": adjacent_prob,
+        "adjacent_selection_temperature": adjacent_temperature,
         "max_multichar_forward": max_forward,
         "multichar_forward_apply_probability": forward_prob,
+        "multichar_forward_temperature": forward_temperature,
         "max_multichar_reverse": max_reverse,
         "multichar_reverse_apply_probability": reverse_prob,
+        "multichar_reverse_temperature": reverse_temperature,
         "max_ocr_substitutions": max_ocr,
         "ocr_apply_probability": ocr_prob,
+        "ocr_selection_temperature": ocr_temperature,
         "max_exact_lookalikes": max_exact,
         "exact_apply_probability": exact_prob,
+        "exact_selection_temperature": exact_temperature,
         "ocr_share": float(ocr_share),
         "short_max_len": int(short_max_len),
         "medium_max_len": int(medium_max_len),
@@ -425,6 +435,8 @@ def write_manifest(args: argparse.Namespace, context: dict[str, Any]) -> None:
         },
         "base_split_counts": split_count_payload,
         "active_lookup_counts": {
+            "adjacent_real_names": len(context["lookups"]["adjacent"]),
+            "adjacent_rules": int(sum(len(rules) for rules in context["lookups"]["adjacent"].values())),
             "ocr_source_characters": len(context["lookups"]["ocr"]),
             "exact_source_characters": len(context["lookups"]["exact"]),
             "multichar_forward_rules": len(context["lookups"]["multichar_forward"]),

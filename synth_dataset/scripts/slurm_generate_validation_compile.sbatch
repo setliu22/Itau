@@ -20,6 +20,7 @@ export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 export MPLCONFIGDIR=/home/setliu22/Itau/synth_dataset/.cache/matplotlib
 
 "$PYTHON" -m py_compile \
+  generate_validation/build_scored_lookups.py \
   generate_validation/pipeline_common.py \
   generate_validation/optimize_validation_replacements.py \
   generate_validation/final_comparison.py \

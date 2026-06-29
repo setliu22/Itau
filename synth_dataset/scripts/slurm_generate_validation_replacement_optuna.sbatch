@@ -38,10 +38,18 @@ rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/FINALVALIDATIONCOMPARISON.txt
 rm -rf NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison
 
 "$PYTHON" -m py_compile \
+  generate_validation/build_scored_lookups.py \
   generate_validation/pipeline_common.py \
   generate_validation/optimize_validation_replacements.py \
   generate_validation/final_comparison.py \
   scripts/train_large_dataset_models.py
+
+"$PYTHON" generate_validation/build_scored_lookups.py \
+  --input-dir BASE_DATASETS_DO_NOT_EVER_DELETE \
+  --split validation \
+  --output-dir LOOKUP_TABLE_IN_USE \
+  --device cuda \
+  --legit-batch-size 256
 
 "$PYTHON" generate_validation/optimize_validation_replacements.py \
   --input-dir BASE_DATASETS_DO_NOT_EVER_DELETE \
