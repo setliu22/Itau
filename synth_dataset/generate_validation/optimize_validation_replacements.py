@@ -16,12 +16,11 @@ import numpy as np
 import pandas as pd
 
 from pipeline_common import (
-    CharacterOCRCache,
     LegitScoreCache,
     SEEDS,
     SYNTH_ROOT,
     SPLIT_FILES,
-    TrOCRTextReader,
+    TableOCRNormalizer,
     all_existing_fraudulent_keys,
     build_legit_scorer,
     build_fixed_negative_evaluation_cache,
@@ -55,7 +54,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--study-name", default="validation_replacement_optuna")
     parser.add_argument("--storage", default="sqlite:///generate_validation/runs/validation_replacement_optuna/study.db")
     parser.add_argument("--split", default="validation", choices=sorted(SPLIT_FILES))
-    parser.add_argument("--n-trials", type=int, default=50)
+    parser.add_argument("--n-trials", type=int, default=10)
     parser.add_argument("--expected-rows", type=int, default=9999)
     parser.add_argument("--legit-threshold", type=float, default=4.0)
     parser.add_argument("--legit-batch-size", type=int, default=256)
@@ -236,22 +235,21 @@ def load_context(args: argparse.Namespace) -> dict[str, Any]:
         processor_name=args.legit_processor_name,
         device=args.device,
     )
-    reader = TrOCRTextReader(model_name=args.ocr_model_name, device=args.device)
-    ocr_cache = CharacterOCRCache(cache_dir / "character_ocr_cache.parquet")
+    ocr_normalizer = TableOCRNormalizer(
+        ocr_lookup_path=args.lookup_dir / "ocr_confusable_approved.csv",
+        exact_lookup_path=args.lookup_dir / "exact_lookalike_approved.csv",
+    )
     legit_score_cache = LegitScoreCache(cache_dir / "legit_pair_scores.parquet")
     fixed_negative_cache = build_fixed_negative_evaluation_cache(
         original,
-        reader=reader,
-        ocr_batch_size=int(args.ocr_batch_size),
-        ocr_cache=ocr_cache,
+        ocr_normalizer=ocr_normalizer,
     )
     return {
         "original": original,
         "lookups": lookups,
         "forbidden": forbidden,
         "legit_scorer": legit_scorer,
-        "reader": reader,
-        "ocr_cache": ocr_cache,
+        "ocr_normalizer": ocr_normalizer,
         "legit_score_cache": legit_score_cache,
         "fixed_negative_cache": fixed_negative_cache,
         "cache_dir": cache_dir,
@@ -302,10 +300,8 @@ def run_dataset_for_params(
     else:
         raw_rf, ocr_rf, ocr_frame = evaluate_raw_and_ocr_rf(
             dataset,
-            reader=context["reader"],
-            ocr_batch_size=int(args.ocr_batch_size),
             seed=int(args.rf_seed),
-            ocr_cache=context["ocr_cache"],
+            ocr_normalizer=context["ocr_normalizer"],
             fixed_negative_cache=context["fixed_negative_cache"],
         )
     t_rf = timing()
@@ -465,10 +461,10 @@ def write_manifest(args: argparse.Namespace, context: dict[str, Any]) -> None:
         "base_split_counts": split_count_payload,
         "cache": {
             "cache_dir": str(context.get("cache_dir")),
-            "character_ocr_cache": str(context.get("cache_dir") / "character_ocr_cache.parquet") if context.get("cache_dir") else None,
             "legit_pair_score_cache": str(context.get("cache_dir") / "legit_pair_scores.parquet") if context.get("cache_dir") else None,
             "fixed_negative_rows_cached": int(len(context["fixed_negative_cache"]["raw_frame"])),
         },
+        "ocr_normalization": context["ocr_normalizer"].summary(),
         "active_lookup_counts": {
             "adjacent_real_names": len(context["lookups"]["adjacent"]),
             "adjacent_rules": int(sum(len(rules) for rules in context["lookups"]["adjacent"].values())),

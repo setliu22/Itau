@@ -28,6 +28,13 @@ spans that still exist after swaps. Reverse multichar substitutions are disabled
 OCR and exact-lookalike substitutions run after multichar edits and also skip
 modified spans.
 
+For OCR-normalized RF evaluation, `ocr_confusable_approved.csv` is also the
+normalization source: each replacement character maps to its reviewed
+`primary_sub`, the wrong `a-z`, `0-9`, or hyphen class assigned during manual
+OCR-confusable review. Exact lookalike replacements map back to their source
+character, and native `a-z`, `0-9`, and hyphen map to themselves. This path does
+not rerun an OCR model.
+
 The scored lookup tables are built once by
 `generate_validation/build_scored_lookups.py`. Optuna tunes family-specific
 counts, probabilities, and selection temperatures; it does not recalculate

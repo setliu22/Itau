@@ -25,10 +25,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from evaluate_large_dataset_validation import (  # noqa: E402
-    TrOCRTextReader,
     build_legit_scorer,
-    canonical_character_ocr_text,
-    character_ocr_frame,
     to_jsonable,
 )
 from evaluate_validation_baselines import (  # noqa: E402
@@ -56,6 +53,7 @@ SEEDS = {
     "rf_split": 42,
     "representative_examples": 42,
 }
+OCR_NORMALIZATION_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789-"
 
 
 @dataclass
@@ -113,76 +111,93 @@ class Candidate:
         return len(self.operations)
 
 
-class CharacterOCRCache:
-    """Persistent per-codepoint OCR normalization cache."""
+class TableOCRNormalizer:
+    """Deterministic OCR normalization from approved substitution tables."""
 
-    def __init__(self, path: Path | None) -> None:
-        self.path = Path(path) if path is not None else None
-        self.mapping: dict[str, str] = {}
-        self.last_requested_count = 0
-        self.last_missing_count = 0
-        if self.path is not None and self.path.exists():
-            frame = pd.read_parquet(self.path)
-            if {"character", "normalized_character"}.issubset(frame.columns):
-                for row in frame[["character", "normalized_character"]].itertuples(index=False):
-                    self.mapping[str(row.character)] = "" if pd.isna(row.normalized_character) else str(row.normalized_character)
+    def __init__(self, *, ocr_lookup_path: Path, exact_lookup_path: Path) -> None:
+        self.ocr_lookup_path = Path(ocr_lookup_path)
+        self.exact_lookup_path = Path(exact_lookup_path)
+        self.mapping: dict[str, str] = {char: char for char in OCR_NORMALIZATION_ALPHABET}
+        self.ocr_rule_count = 0
+        self.exact_rule_count = 0
+        self._load_exact_lookalikes()
+        self._load_ocr_confusables()
 
-    def save(self) -> None:
-        if self.path is None:
-            return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        frame = pd.DataFrame(
-            [
-                {"character": character, "normalized_character": normalized}
-                for character, normalized in sorted(self.mapping.items())
-            ]
+    def _load_ocr_confusables(self) -> None:
+        if not self.ocr_lookup_path.exists():
+            raise FileNotFoundError(self.ocr_lookup_path)
+        frame = pd.read_csv(self.ocr_lookup_path)
+        required = {"source_character", "replacement_character", "primary_sub"}
+        missing = required - set(frame.columns)
+        if missing:
+            raise ValueError(
+                f"{self.ocr_lookup_path} is missing {sorted(missing)}. "
+                "OCR-confusable replacements must include primary_sub."
+            )
+        for row in frame.itertuples(index=False):
+            payload = row._asdict()
+            source = str(payload["source_character"])
+            replacement = str(payload["replacement_character"])
+            primary_sub = str(payload["primary_sub"])
+            if len(source) != 1 or len(replacement) != 1 or len(primary_sub) != 1:
+                raise ValueError(f"Invalid OCR mapping row: {payload}")
+            if primary_sub not in OCR_NORMALIZATION_ALPHABET:
+                raise ValueError(f"OCR primary_sub {primary_sub!r} is not in {OCR_NORMALIZATION_ALPHABET!r}")
+            self.mapping[replacement] = primary_sub
+            self.ocr_rule_count += 1
+
+    def _load_exact_lookalikes(self) -> None:
+        if not self.exact_lookup_path.exists():
+            raise FileNotFoundError(self.exact_lookup_path)
+        frame = pd.read_csv(self.exact_lookup_path)
+        required = {"source_character", "replacement_character"}
+        missing = required - set(frame.columns)
+        if missing:
+            raise ValueError(f"{self.exact_lookup_path} is missing {sorted(missing)}")
+        for row in frame.itertuples(index=False):
+            payload = row._asdict()
+            source = str(payload["source_character"])
+            replacement = str(payload["replacement_character"])
+            if len(source) != 1 or len(replacement) != 1:
+                continue
+            if source not in OCR_NORMALIZATION_ALPHABET:
+                continue
+            self.mapping[replacement] = source
+            self.exact_rule_count += 1
+
+    @staticmethod
+    def _fallback_normalize_character(char: str) -> str:
+        normalized = unicodedata.normalize("NFKD", str(char)).casefold()
+        return "".join(
+            value
+            for value in normalized
+            if value in OCR_NORMALIZATION_ALPHABET
         )
-        frame.to_parquet(self.path, index=False)
-
-    def ensure_texts(
-        self,
-        texts: list[str],
-        *,
-        reader: TrOCRTextReader,
-        batch_size: int,
-    ) -> int:
-        needed = sorted({char for text in texts for char in str(text) if not char.isspace()})
-        missing = [char for char in needed if char not in self.mapping]
-        self.last_requested_count = len(needed)
-        self.last_missing_count = len(missing)
-        if not missing:
-            return 0
-        outputs = reader.recognize_characterwise(missing, batch_size=int(batch_size), variations=[{}])
-        for char in missing:
-            values = outputs.get(char, [])
-            predicted = values[0] if values else ""
-            self.mapping[char] = canonical_character_ocr_text(predicted)
-        self.save()
-        return len(missing)
 
     def normalize_text(self, text: Any) -> str:
-        return "".join(
-            self.mapping.get(char, canonical_character_ocr_text(char))
-            for char in str(text)
-            if not char.isspace()
-        )
+        pieces = []
+        for char in str(text):
+            if char.isspace():
+                continue
+            pieces.append(self.mapping.get(char, self._fallback_normalize_character(char)))
+        return "".join(pieces)
 
-    def normalize_frame(
-        self,
-        frame: pd.DataFrame,
-        *,
-        reader: TrOCRTextReader,
-        batch_size: int,
-    ) -> pd.DataFrame:
-        texts = (
-            frame["fraudulent_name"].astype(str).tolist()
-            + frame["real_name"].astype(str).tolist()
-        )
-        self.ensure_texts(texts, reader=reader, batch_size=int(batch_size))
+    def normalize_frame(self, frame: pd.DataFrame) -> pd.DataFrame:
         result = frame.copy()
         result["fraudulent_name"] = result["fraudulent_name"].map(self.normalize_text)
         result["real_name"] = result["real_name"].map(self.normalize_text)
         return result
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "method": "lookup_table_primary_sub",
+            "alphabet": OCR_NORMALIZATION_ALPHABET,
+            "ocr_lookup_path": str(self.ocr_lookup_path),
+            "exact_lookup_path": str(self.exact_lookup_path),
+            "ocr_rule_count": int(self.ocr_rule_count),
+            "exact_rule_count": int(self.exact_rule_count),
+            "mapping_size": int(len(self.mapping)),
+        }
 
 
 class LegitScoreCache:
@@ -1513,31 +1528,19 @@ def evaluate_random_forest_auc(
     )
 
 
-def cached_character_ocr_frame(
-    frame: pd.DataFrame,
-    *,
-    reader: TrOCRTextReader,
-    batch_size: int,
-    cache: CharacterOCRCache | None = None,
-) -> pd.DataFrame:
-    if cache is None:
-        return character_ocr_frame(frame, reader=reader, batch_size=int(batch_size))
-    return cache.normalize_frame(frame, reader=reader, batch_size=int(batch_size))
+def lookup_ocr_frame(frame: pd.DataFrame, *, normalizer: TableOCRNormalizer) -> pd.DataFrame:
+    return normalizer.normalize_frame(frame)
 
 
 def build_fixed_negative_evaluation_cache(
     original_frame: pd.DataFrame,
     *,
-    reader: TrOCRTextReader,
-    ocr_batch_size: int,
-    ocr_cache: CharacterOCRCache | None = None,
+    ocr_normalizer: TableOCRNormalizer,
 ) -> dict[str, Any]:
     negative_frame = original_frame.loc[original_frame["label"].eq(0.0), REQUIRED_COLUMNS].reset_index(drop=True)
-    negative_ocr_frame = cached_character_ocr_frame(
+    negative_ocr_frame = lookup_ocr_frame(
         negative_frame,
-        reader=reader,
-        batch_size=int(ocr_batch_size),
-        cache=ocr_cache,
+        normalizer=ocr_normalizer,
     )
     return {
         "raw_frame": negative_frame,
@@ -1574,19 +1577,15 @@ def penalized_rf_result(*, seed: int, reason: str) -> dict[str, Any]:
 def evaluate_raw_and_ocr_rf(
     frame: pd.DataFrame,
     *,
-    reader: TrOCRTextReader,
-    ocr_batch_size: int,
     seed: int,
-    ocr_cache: CharacterOCRCache | None = None,
+    ocr_normalizer: TableOCRNormalizer,
     fixed_negative_cache: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], pd.DataFrame]:
     if fixed_negative_cache is None:
         raw = evaluate_random_forest_auc(frame, seed=seed)
-        ocr_frame = cached_character_ocr_frame(
+        ocr_frame = lookup_ocr_frame(
             frame,
-            reader=reader,
-            batch_size=int(ocr_batch_size),
-            cache=ocr_cache,
+            normalizer=ocr_normalizer,
         )
         ocr = evaluate_random_forest_auc(ocr_frame, seed=seed)
         return raw, ocr, ocr_frame
@@ -1604,11 +1603,9 @@ def evaluate_raw_and_ocr_rf(
     )
     raw = evaluate_random_forest_auc(raw_frame, seed=seed, features=raw_features)
 
-    positive_ocr_frame = cached_character_ocr_frame(
+    positive_ocr_frame = lookup_ocr_frame(
         positive_frame,
-        reader=reader,
-        batch_size=int(ocr_batch_size),
-        cache=ocr_cache,
+        normalizer=ocr_normalizer,
     )
     ocr_frame = pd.concat(
         [positive_ocr_frame, fixed_negative_cache["ocr_frame"]],

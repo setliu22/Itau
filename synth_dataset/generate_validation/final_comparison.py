@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 
 from pipeline_common import (
-    CharacterOCRCache,
     REQUIRED_COLUMNS,
     SEEDS,
+    TableOCRNormalizer,
     build_legit_scorer,
     evaluate_raw_and_ocr_rf,
     load_pair_frame,
@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--audit", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/VALIDATION_POSITIVE_GENERATION_AUDIT.parquet"))
     parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison"))
     parser.add_argument("--output-text", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/FINALVALIDATIONCOMPARISON.txt"))
-    parser.add_argument("--cache-dir", type=Path, default=Path(".cache/validation_generation/validation_replacement_optuna"))
+    parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
     parser.add_argument("--max-examples", type=int, default=50)
     parser.add_argument("--legit-model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))
     parser.add_argument("--legit-font-path", type=Path, default=Path("fonts/unifont-17.0.04.otf"))
@@ -76,21 +76,19 @@ def main() -> int:
         batch_size=int(args.legit_batch_size),
         output_path=args.output_dir / "original_positive_legit_scores.parquet",
     )
-    reader = make_reader(args)
-    ocr_cache = CharacterOCRCache(args.cache_dir / "character_ocr_cache.parquet")
+    ocr_normalizer = TableOCRNormalizer(
+        ocr_lookup_path=args.lookup_dir / "ocr_confusable_approved.csv",
+        exact_lookup_path=args.lookup_dir / "exact_lookalike_approved.csv",
+    )
     generated_raw_rf, generated_ocr_rf, generated_ocr = evaluate_raw_and_ocr_rf(
         generated,
-        reader=reader,
-        ocr_batch_size=int(args.ocr_batch_size),
         seed=int(args.rf_seed),
-        ocr_cache=ocr_cache,
+        ocr_normalizer=ocr_normalizer,
     )
     original_raw_rf, original_ocr_rf, original_ocr = evaluate_raw_and_ocr_rf(
         original,
-        reader=reader,
-        ocr_batch_size=int(args.ocr_batch_size),
         seed=int(args.rf_seed),
-        ocr_cache=ocr_cache,
+        ocr_normalizer=ocr_normalizer,
     )
     generated_ocr.to_parquet(args.output_dir / "generated_validation_character_ocr.parquet", index=False)
     original_ocr.to_parquet(args.output_dir / "original_validation_character_ocr.parquet", index=False)
@@ -124,6 +122,7 @@ def main() -> int:
             "original": original_raw_rf,
         },
         "random_forest_ocr_normalized": {
+            "normalization": ocr_normalizer.summary(),
             "generated": generated_ocr_rf,
             "original": original_ocr_rf,
         },
@@ -134,12 +133,6 @@ def main() -> int:
     args.output_text.write_text(render_text(metrics, examples), encoding="utf-8")
     print(f"Wrote {args.output_text}", flush=True)
     return 0
-
-
-def make_reader(args: argparse.Namespace):
-    from pipeline_common import TrOCRTextReader
-
-    return TrOCRTextReader(model_name=args.ocr_model_name, device=args.device)
 
 
 def label_counts(frame: pd.DataFrame) -> dict[str, int]:

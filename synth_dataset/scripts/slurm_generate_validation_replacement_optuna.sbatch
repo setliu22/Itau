@@ -2,7 +2,7 @@
 #SBATCH --job-name=valid-replace-optuna
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
-#SBATCH --time=06:00:00
+#SBATCH --time=03:00:00
 #SBATCH --partition=mit_preemptable
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G
@@ -59,7 +59,7 @@ rm -rf NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison
   --study-name validation_replacement_optuna \
   --storage sqlite:///"$RUN_DIR"/study.db \
   --split validation \
-  --n-trials 50 \
+  --n-trials 10 \
   --expected-rows 9999 \
   --legit-threshold 4.0 \
   --device cuda \
