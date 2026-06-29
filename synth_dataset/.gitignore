@@ -5,9 +5,24 @@ __pycache__/
 *.pyc
 
 # Slurm/runtime logs
+logs/
 outputs/slurm/
 *.out
 *.err
+
+# Generated datasets/results that are too large for git.
+large_dataset/
+large_dataset_q25/
+NEW_RESULTS/
+NEW_RESULTS_Q25/
+validation_generation_q25/
+validation_optuna_study/
+
+# Model/checkpoint artifacts.
+*.pt
+*.pkl
+*.png
+*.parquet
 
 # Duplicate tabular exports; parquet/text outputs are canonical here.
 datasets/*.csv
