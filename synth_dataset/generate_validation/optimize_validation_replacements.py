@@ -418,16 +418,22 @@ def select_final_trial(completed: pd.DataFrame, *, legit_min: float) -> pd.Serie
     if "dropped_positive_count" not in eligible.columns:
         eligible["dropped_positive_count"] = 0
     eligible = eligible.assign(
-        worst_auc_bucket=(eligible["worst_rf_auc_predictability"].astype(float) / 0.01).round().astype(int)
+        ocr_auc_bucket=(eligible["ocr_rf_auc_predictability"].astype(float) / 0.01).round().astype(int),
+        raw_auc_bucket=(eligible["raw_rf_auc_predictability"].astype(float) / 0.01).round().astype(int),
     )
     sort_columns = [
-        "worst_auc_bucket",
+        "ocr_auc_bucket",
+        "raw_auc_bucket",
         "positive_legit_mean",
         "positive_legit_q25",
         "dropped_positive_count",
         "mean_positive_modifications",
     ]
-    eligible = eligible.sort_values(sort_columns, ascending=[True, False, False, True, True], kind="stable")
+    eligible = eligible.sort_values(
+        sort_columns,
+        ascending=[True, True, False, False, True, True],
+        kind="stable",
+    )
     return eligible.iloc[0]
 
 
