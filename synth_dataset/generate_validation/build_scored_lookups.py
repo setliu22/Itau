@@ -57,7 +57,13 @@ def main() -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     output_paths = expected_output_paths(args.output_dir)
-    if not args.force and all(path.exists() for path in output_paths.values()):
+    input_paths = [args.exact_lookup, args.ocr_lookup, args.multichar_lookup]
+    outputs_fresh = all(
+        path.exists()
+        and all(not input_path.exists() or path.stat().st_mtime >= input_path.stat().st_mtime for input_path in input_paths)
+        for path in output_paths.values()
+    )
+    if not args.force and outputs_fresh:
         summary = {"status": "existing_scored_lookups_reused", "outputs": {k: str(v) for k, v in output_paths.items()}}
         print(json.dumps(summary, indent=2, sort_keys=True), flush=True)
         return 0
@@ -83,7 +89,6 @@ def main() -> int:
     )
 
     multichar_forward = load_multichar_rules(args.multichar_lookup, direction="forward")
-    multichar_reverse = reverse_multichar_rules(multichar_forward)
     ocr_rules = load_character_rules(args.ocr_lookup, family="ocr")
     exact_rules = load_character_rules(args.exact_lookup, family="exact")
 
@@ -95,14 +100,6 @@ def main() -> int:
         ),
         "multichar_forward_q25_lookup": score_q25_rules(
             multichar_forward,
-            reference_names,
-            scorer,
-            batch_size=int(args.legit_batch_size),
-            minimum_support=int(args.minimum_q25_examples),
-            max_examples_per_rule=int(args.max_examples_per_rule),
-        ),
-        "multichar_reverse_q25_lookup": score_q25_rules(
-            multichar_reverse,
             reference_names,
             scorer,
             batch_size=int(args.legit_batch_size),
@@ -168,7 +165,6 @@ def expected_output_paths(output_dir: Path) -> dict[str, Path]:
     return {
         "adjacent": output_dir / "adjacent_swap_scored_lookup.parquet",
         "multichar_forward": output_dir / "multichar_forward_q25_lookup.parquet",
-        "multichar_reverse": output_dir / "multichar_reverse_q25_lookup.parquet",
         "ocr": output_dir / "ocr_q25_lookup.parquet",
         "exact": output_dir / "exact_q25_lookup.parquet",
     }
@@ -223,22 +219,6 @@ def load_multichar_rules(path: Path, *, direction: str) -> list[dict[str, Any]]:
                 )
             )
     return dedupe_rules(rules)
-
-
-def reverse_multichar_rules(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    reversed_rules = []
-    for rule in rules:
-        reversed_rules.append(
-            rule_dict(
-                str(rule["replacement"]),
-                str(rule["source"]),
-                "multichar",
-                "reverse",
-                f"reverse_{rule['operation']}",
-                str(rule.get("input_source", "")),
-            )
-        )
-    return dedupe_rules(reversed_rules)
 
 
 def load_character_rules(path: Path, *, family: str) -> list[dict[str, Any]]:

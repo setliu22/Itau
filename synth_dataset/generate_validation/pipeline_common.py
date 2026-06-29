@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import math
 import re
@@ -84,7 +85,6 @@ class AdjacentRule:
 class CountPlan:
     adjacent_swaps: int
     multichar_forward: int
-    multichar_reverse: int
     total_char_substitutions: int
     ocr_substitutions: int
     exact_lookalikes: int
@@ -93,7 +93,6 @@ class CountPlan:
     replaceable_characters: int
     adjacent_temperature: float = 0.0
     multichar_forward_temperature: float = 0.0
-    multichar_reverse_temperature: float = 0.0
     ocr_temperature: float = 0.0
     exact_temperature: float = 0.0
 
@@ -205,7 +204,10 @@ def load_scored_character_rules(
     q25_path: Path,
     fallback_csv: Path,
 ) -> dict[str, list[dict[str, Any]]]:
-    if q25_path.exists():
+    use_q25 = q25_path.exists() and (
+        not fallback_csv.exists() or q25_path.stat().st_mtime >= fallback_csv.stat().st_mtime
+    )
+    if use_q25:
         frame = pd.read_parquet(q25_path)
         source_col = "source" if "source" in frame.columns else "source_character"
         replacement_col = "replacement" if "replacement" in frame.columns else "replacement_character"
@@ -219,10 +221,6 @@ def load_scored_character_rules(
     missing = required - set(frame.columns)
     if missing:
         raise ValueError(f"Character lookup missing columns: {sorted(missing)}")
-    if "meets_min_support" in frame.columns:
-        supported = frame[frame["meets_min_support"].astype(bool)].copy()
-        if not supported.empty:
-            frame = supported
     lookup: dict[str, list[dict[str, Any]]] = {}
     for row in frame.itertuples(index=False):
         payload = row._asdict()
@@ -266,10 +264,6 @@ def load_multichar_rules(path: Path | None = None, *, direction: str = "forward"
     replacement_col = "replacement" if "replacement" in frame.columns else "replacement_span"
     if source_col not in frame.columns or replacement_col not in frame.columns:
         return default_multichar_rules()[0 if direction == "forward" else 1]
-    if "meets_min_support" in frame.columns:
-        supported = frame[frame["meets_min_support"].astype(bool)].copy()
-        if not supported.empty:
-            frame = supported
     score_col = "LEGIT_q25" if "LEGIT_q25" in frame.columns else "legit_q25"
     rules: list[MultiRule] = []
     for row in frame.itertuples(index=False):
@@ -374,10 +368,6 @@ def load_lookups(lookup_dir: Path) -> dict[str, Any]:
         "multichar_forward": load_multichar_rules(
             lookup_dir / "multichar_forward_q25_lookup.parquet",
             direction="forward",
-        ),
-        "multichar_reverse": load_multichar_rules(
-            lookup_dir / "multichar_reverse_q25_lookup.parquet",
-            direction="reverse",
         ),
     }
 
@@ -513,11 +503,6 @@ def sample_count_plan(
         float(params["multichar_forward_apply_probability"]),
         rng,
     )
-    reverse = sample_attempt_count(
-        int(params["max_multichar_reverse"]),
-        float(params["multichar_reverse_apply_probability"]),
-        rng,
-    )
     ocr_cap = sample_attempt_count(
         int(params["max_ocr_substitutions"]),
         float(params["ocr_apply_probability"]),
@@ -541,7 +526,6 @@ def sample_count_plan(
     return CountPlan(
         adjacent_swaps=int(adjacent),
         multichar_forward=int(forward),
-        multichar_reverse=int(reverse),
         total_char_substitutions=int(total_chars),
         ocr_substitutions=int(ocr_count),
         exact_lookalikes=int(exact_count),
@@ -550,7 +534,6 @@ def sample_count_plan(
         replaceable_characters=int(replaceable),
         adjacent_temperature=float(params.get("adjacent_selection_temperature", 0.0)),
         multichar_forward_temperature=float(params.get("multichar_forward_temperature", 0.0)),
-        multichar_reverse_temperature=float(params.get("multichar_reverse_temperature", 0.0)),
         ocr_temperature=float(params.get("ocr_selection_temperature", 0.0)),
         exact_temperature=float(params.get("exact_selection_temperature", 0.0)),
     )
@@ -747,15 +730,6 @@ def generate_candidate(
         rng=rng,
     )
     operations.extend(ops)
-    units, ops = apply_scored_multichar(
-        units,
-        rules=lookups["multichar_reverse"],
-        family="multichar_reverse",
-        count=plan.multichar_reverse,
-        temperature=float(plan_params_temperature(plan, "multichar_reverse")),
-        rng=rng,
-    )
-    operations.extend(ops)
     units, ops = apply_scored_character_substitutions(
         units,
         lookup=lookups["ocr"],
@@ -791,6 +765,139 @@ def plan_params_temperature(plan: CountPlan, family: str) -> float:
     return float(getattr(plan, f"{family}_temperature", 0.0))
 
 
+def make_variant_candidate(
+    real_name: str,
+    *,
+    generated: str,
+    operations: list[dict[str, Any]],
+    plan: CountPlan,
+    attempt_index: int,
+) -> Candidate:
+    return Candidate(
+        generated=generated,
+        operations=operations,
+        plan=plan,
+        attempt_index=int(attempt_index),
+        valid=bool(generated != real_name and operations and ".com" not in generated.casefold()),
+        invalid_reason="" if generated != real_name and operations else "unchanged_or_no_valid_operation",
+    )
+
+
+def enumerate_legal_variants(
+    real_name: str,
+    *,
+    plan: CountPlan,
+    lookups: dict[str, Any],
+    max_variants: int = 10000,
+    max_character_combo_size: int = 4,
+) -> list[Candidate]:
+    text = str(real_name)
+    variants: list[Candidate] = []
+    seen: set[str] = set()
+
+    def add_variant(generated: str, operations: list[dict[str, Any]]) -> None:
+        if len(variants) >= int(max_variants):
+            return
+        key = uniqueness_key(generated)
+        if key == uniqueness_key(text) or key in seen:
+            return
+        seen.add(key)
+        variants.append(
+            make_variant_candidate(
+                text,
+                generated=generated,
+                operations=operations,
+                plan=plan,
+                attempt_index=1000 + len(variants),
+            )
+        )
+
+    if len(text) >= 8:
+        for rule in lookups.get("adjacent", {}).get(text, []):
+            if rule.swap_i < 2:
+                continue
+            chars = list(text)
+            chars[rule.swap_i], chars[rule.swap_j] = chars[rule.swap_j], chars[rule.swap_i]
+            generated = "".join(chars)
+            add_variant(
+                generated,
+                [
+                    {
+                        "family": "adjacent",
+                        "operation": "capacity_adjacent_swap",
+                        "position": int(rule.swap_i),
+                        "source": text[rule.swap_i : rule.swap_j + 1],
+                        "replacement": generated[rule.swap_i : rule.swap_j + 1],
+                        "score": float(rule.score),
+                        "before": text,
+                        "after": generated,
+                        "capacity_fill": True,
+                    }
+                ],
+            )
+
+    for rule in lookups.get("multichar_forward", []):
+        for start in find_unmodified_occurrences([Unit(char=char) for char in text], rule.source):
+            generated = text[:start] + rule.replacement + text[start + len(rule.source) :]
+            add_variant(
+                generated,
+                [
+                    {
+                        "family": "multichar_forward",
+                        "operation": rule.operation,
+                        "position": int(start),
+                        "source": rule.source,
+                        "replacement": rule.replacement,
+                        "score": float(rule.score),
+                        "before": text,
+                        "after": generated,
+                        "capacity_fill": True,
+                    }
+                ],
+            )
+
+    position_entries: list[tuple[int, str, list[dict[str, Any]]]] = []
+    for index, char in enumerate(text):
+        entries = []
+        for family in ("ocr", "exact"):
+            for entry in lookups.get(family, {}).get(char, []):
+                entries.append({**entry, "family": family})
+        entries = sorted(entries, key=lambda item: (-float(item.get("score", 0.0)), str(item.get("replacement", ""))))
+        if entries:
+            position_entries.append((index, char, entries))
+
+    combo_limit = min(int(max_character_combo_size), len(position_entries))
+    for combo_size in range(1, combo_limit + 1):
+        for position_combo in itertools.combinations(position_entries, combo_size):
+            replacement_lists = [entries for _, _, entries in position_combo]
+            for entry_combo in itertools.product(*replacement_lists):
+                if len(variants) >= int(max_variants):
+                    return variants
+                chars = list(text)
+                operations = []
+                before = text
+                for (index, source, _), entry in zip(position_combo, entry_combo):
+                    replacement = str(entry["replacement"])
+                    chars[index] = replacement
+                    after = "".join(chars)
+                    operations.append(
+                        {
+                            "family": str(entry["family"]),
+                            "operation": str(entry.get("operation") or f"{source}_to_{replacement}"),
+                            "position": int(index),
+                            "source": source,
+                            "replacement": replacement,
+                            "score": float(entry.get("score", 0.0)),
+                            "before": before,
+                            "after": after,
+                            "capacity_fill": True,
+                        }
+                    )
+                    before = after
+                add_variant("".join(chars), operations)
+    return variants
+
+
 def generate_uniqueness_fallback(
     real_name: str,
     *,
@@ -802,7 +909,7 @@ def generate_uniqueness_fallback(
     for variant_index in range(int(max_variants)):
         rng = np.random.default_rng(stable_seed("fallback", real_name, variant_index))
         units = [Unit(char=char) for char in str(real_name)]
-        family_order = ["adjacent", "multichar_forward", "multichar_reverse", "ocr", "exact"]
+        family_order = ["adjacent", "multichar_forward", "ocr", "exact"]
         family = family_order[variant_index % len(family_order)]
         operations: list[dict[str, Any]] = []
         if family == "adjacent":
@@ -814,7 +921,7 @@ def generate_uniqueness_fallback(
                 temperature=2.0,
                 rng=rng,
             )
-        elif family in {"multichar_forward", "multichar_reverse"}:
+        elif family == "multichar_forward":
             units, operations = apply_scored_multichar(
                 units,
                 rules=lookups[family],
@@ -848,7 +955,7 @@ def generate_uniqueness_fallback(
 
 
 def operation_family_counts(operations: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {"adjacent": 0, "multichar_forward": 0, "multichar_reverse": 0, "ocr": 0, "exact": 0}
+    counts = {"adjacent": 0, "multichar_forward": 0, "ocr": 0, "exact": 0}
     for op in operations:
         family = str(op.get("family", ""))
         if family in counts:
@@ -884,7 +991,6 @@ def candidate_to_audit(
         "total_modifications": int(counts["total"]),
         "adjacent_swaps": int(counts["adjacent"]),
         "multichar_forward": int(counts["multichar_forward"]),
-        "multichar_reverse": int(counts["multichar_reverse"]),
         "ocr_substitutions": int(counts["ocr"]),
         "exact_lookalikes": int(counts["exact"]),
         "normalized_fraudulent_key": uniqueness_key(candidate.generated),
@@ -919,6 +1025,8 @@ def generate_positive_replacements(
     used_keys = set(forbidden_fraudulent_keys)
     invalid_counts: dict[str, int] = {}
     fallback_count = 0
+    capacity_fill_count = 0
+    variant_pool_cache: dict[str, list[Candidate]] = {}
     for row_index, real_name in enumerate(real_names):
         candidate = generate_candidate(
             real_name,
@@ -952,26 +1060,43 @@ def generate_positive_replacements(
         used_keys.add(key)
 
     failures = [idx for idx in range(len(real_names)) if idx not in accepted]
-    if failures:
-        raise RuntimeError(
-            f"Generated no valid positive replacement for {len(failures):,} rows; "
-            f"first failed row indices: {failures[:10]}"
-        )
+    for row_index in list(failures):
+        real_name = real_names[row_index]
+        if real_name not in variant_pool_cache:
+            variant_pool_cache[real_name] = enumerate_legal_variants(
+                real_name,
+                plan=plans[row_index],
+                lookups=lookups,
+            )
+        for candidate in variant_pool_cache[real_name]:
+            key = uniqueness_key(candidate.generated)
+            if key in used_keys or key == uniqueness_key(real_name):
+                continue
+            accepted[row_index] = candidate
+            used_keys.add(key)
+            capacity_fill_count += 1
+            break
 
-    legit_pairs = [(accepted[idx].generated, real_names[idx]) for idx in range(len(real_names))]
+    failures = [idx for idx in range(len(real_names)) if idx not in accepted]
+    if len(failures) == len(real_names):
+        raise RuntimeError("Generated no valid positive replacements for any positive rows.")
+
+    accepted_indices = sorted(accepted)
+    legit_pairs = [(accepted[idx].generated, real_names[idx]) for idx in accepted_indices]
     scores = legit_scorer.score_pairs(legit_pairs, batch_size=int(legit_batch_size)).astype(float)
-    for row_index, score in enumerate(scores):
+    for row_index, score in zip(accepted_indices, scores):
         accepted[row_index].legit_score = float(score)
 
     positive_rows = []
     audit_rows = []
-    for row_index in range(len(real_names)):
+    for row_index in accepted_indices:
         candidate = accepted[row_index]
         original_index = int(positives.loc[row_index, "original_row_index"])
         row = original_frame.loc[original_index].copy()
         row["fraudulent_name"] = candidate.generated
         row["real_name"] = real_names[row_index]
         row["label"] = 1.0
+        row["source_original_row_index"] = original_index
         positive_rows.append(row.to_dict())
         audit_rows.append(
             candidate_to_audit(
@@ -995,6 +1120,10 @@ def generate_positive_replacements(
         invalid_counts=invalid_counts,
     )
     report["fallback_count"] = int(fallback_count)
+    report["capacity_fill_count"] = int(capacity_fill_count)
+    report["variant_pool_real_name_count"] = int(len(variant_pool_cache))
+    report["dropped_positive_count"] = int(len(failures))
+    report["first_dropped_positive_indices"] = [int(idx) for idx in failures[:25]]
     report["legit_threshold"] = float(legit_threshold)
     report["below_legit_threshold_count"] = int((audit["positive_legit_score"].astype(float) < float(legit_threshold)).sum())
     return positive_frame, audit, report
@@ -1012,10 +1141,13 @@ def validate_positive_replacements(
     original_positive = original_frame.loc[original_frame["label"].eq(1.0)].copy()
     generated_counts = positive_real_name_counts(positive_frame)
     original_counts = positive_real_name_counts(original_positive)
-    if generated_counts != original_counts:
-        raise RuntimeError(f"{split} generated positive real_name counts do not match original counts.")
-    if len(positive_frame) != len(original_positive):
-        raise RuntimeError(f"{split} generated {len(positive_frame)} positives; expected {len(original_positive)}.")
+    for real_name, generated_count in generated_counts.items():
+        if generated_count > original_counts.get(real_name, 0):
+            raise RuntimeError(f"{split} generated too many positives for real_name {real_name!r}.")
+    if len(positive_frame) > len(original_positive):
+        raise RuntimeError(f"{split} generated {len(positive_frame)} positives; expected at most {len(original_positive)}.")
+    if len(positive_frame) != len(audit):
+        raise RuntimeError(f"{split} generated positives and audit rows differ: {len(positive_frame)} vs {len(audit)}.")
     if has_dot_com(positive_frame):
         raise RuntimeError(f"{split} generated positives contain .com.")
     if positive_frame["label"].astype(float).ne(1.0).any():
@@ -1047,6 +1179,8 @@ def validate_positive_replacements(
     return {
         "split": split,
         "positive_count": int(len(positive_frame)),
+        "original_positive_count": int(len(original_positive)),
+        "dropped_positive_count": int(len(original_positive) - len(positive_frame)),
         "unique_positive_real_names": int(positive_frame["real_name"].nunique()),
         "duplicate_generated_fraudulent_names": duplicate_name_count,
         "duplicate_generated_pairs": duplicate_pairs,
@@ -1058,7 +1192,6 @@ def validate_positive_replacements(
             for family, column in [
                 ("adjacent", "adjacent_swaps"),
                 ("multichar_forward", "multichar_forward"),
-                ("multichar_reverse", "multichar_reverse"),
                 ("ocr", "ocr_substitutions"),
                 ("exact", "exact_lookalikes"),
             ]
@@ -1073,9 +1206,19 @@ def assemble_replaced_split(
     result = original_frame.copy()
     positive_indices = result.index[result["label"].astype(float).eq(1.0)].to_list()
     generated_positive = generated_positive.reset_index(drop=True)
-    if len(positive_indices) != len(generated_positive):
-        raise RuntimeError("Generated positive count does not match original positive rows.")
-    for output_position, original_index in enumerate(positive_indices):
+    if "source_original_row_index" in generated_positive.columns:
+        generated_indices = [int(value) for value in generated_positive["source_original_row_index"].tolist()]
+    else:
+        if len(generated_positive) > len(positive_indices):
+            raise RuntimeError("Generated more positive rows than original positive rows.")
+        generated_indices = positive_indices[: len(generated_positive)]
+    unknown_indices = sorted(set(generated_indices) - set(positive_indices))
+    if unknown_indices:
+        raise RuntimeError(f"Generated positives reference non-positive original rows: {unknown_indices[:10]}")
+    dropped_positive_indices = sorted(set(positive_indices) - set(generated_indices))
+    if dropped_positive_indices:
+        result = result.drop(index=dropped_positive_indices)
+    for output_position, original_index in enumerate(generated_indices):
         for column in generated_positive.columns:
             if column in result.columns:
                 result.loc[original_index, column] = generated_positive.loc[output_position, column]
@@ -1096,8 +1239,10 @@ def validate_assembled_split(
 ) -> dict[str, Any]:
     original_counts = split_counts(original_frame)
     generated_counts = split_counts(generated_frame)
-    if original_counts != generated_counts:
-        raise RuntimeError(f"{split} generated counts {generated_counts} do not match original {original_counts}.")
+    if generated_counts["negative"] != original_counts["negative"]:
+        raise RuntimeError(f"{split} generated negative count changed: {generated_counts} vs original {original_counts}.")
+    if generated_counts["positive"] > original_counts["positive"]:
+        raise RuntimeError(f"{split} generated too many positives: {generated_counts} vs original {original_counts}.")
     original_negative = original_frame.loc[original_frame["label"].eq(0.0), REQUIRED_COLUMNS].reset_index(drop=True)
     generated_negative = generated_frame.loc[generated_frame["label"].eq(0.0), REQUIRED_COLUMNS].reset_index(drop=True)
     if not original_negative.equals(generated_negative):
@@ -1109,7 +1254,8 @@ def validate_assembled_split(
         "original_counts": original_counts,
         "generated_counts": generated_counts,
         "negative_rows_unchanged": True,
-        "positive_rows_replaced": int(original_counts["positive"]),
+        "positive_rows_replaced": int(generated_counts["positive"]),
+        "positive_rows_dropped": int(original_counts["positive"] - generated_counts["positive"]),
     }
 
 
@@ -1238,6 +1384,7 @@ def trial_summary_row(
         "positive_count": int(validation_report["generated_counts"]["positive"]),
         "negative_count": int(validation_report["generated_counts"]["negative"]),
         "total_count": int(validation_report["generated_counts"]["rows"]),
+        "dropped_positive_count": int(validation_report.get("positive_rows_dropped", generation_report.get("dropped_positive_count", 0))),
         "mean_positive_modifications": float(generation_report["mean_total_modifications"]),
         "legit_gate_passed": bool(float(legit_stats["mean"]) >= 4.0),
     }
