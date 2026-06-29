@@ -13,9 +13,13 @@ pipeline:
 - `exact_q25_lookup.parquet`, generated from the approved exact-lookalike table
   when missing
 
-`exact_lookalike_approved.csv` intentionally uses the broad DejaVu Sans
-lookalike table, plus DejaVu-renderable digit variants, so every `a-z`, `0-9`,
-and hyphen source has at least one active replacement.
+`exact_lookalike_approved.csv` is intentionally strict. It only keeps
+near-identical DejaVu Sans homoglyphs that remain distinct after Unicode NFKC
+normalization. Accent marks, floating digit glyphs, small caps, roman numerals,
+mathematical sans variants, and Arabic alef-style vertical glyphs are excluded.
+Some source characters therefore have no exact-lookalike replacement; the
+generator drops positive rows that are mathematically impossible to spoof under
+the active rules.
 
 The generator only considers candidates applicable to the current real name and
 current unmodified spans. Adjacent swaps run first and never use the first or

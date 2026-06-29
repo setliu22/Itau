@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline_common import (
+    CharacterOCRCache,
     REQUIRED_COLUMNS,
     SEEDS,
     build_legit_scorer,
@@ -31,6 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--audit", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/VALIDATION_POSITIVE_GENERATION_AUDIT.parquet"))
     parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison"))
     parser.add_argument("--output-text", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/FINALVALIDATIONCOMPARISON.txt"))
+    parser.add_argument("--cache-dir", type=Path, default=Path(".cache/validation_generation/validation_replacement_optuna"))
     parser.add_argument("--max-examples", type=int, default=50)
     parser.add_argument("--legit-model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))
     parser.add_argument("--legit-font-path", type=Path, default=Path("fonts/unifont-17.0.04.otf"))
@@ -75,17 +77,20 @@ def main() -> int:
         output_path=args.output_dir / "original_positive_legit_scores.parquet",
     )
     reader = make_reader(args)
+    ocr_cache = CharacterOCRCache(args.cache_dir / "character_ocr_cache.parquet")
     generated_raw_rf, generated_ocr_rf, generated_ocr = evaluate_raw_and_ocr_rf(
         generated,
         reader=reader,
         ocr_batch_size=int(args.ocr_batch_size),
         seed=int(args.rf_seed),
+        ocr_cache=ocr_cache,
     )
     original_raw_rf, original_ocr_rf, original_ocr = evaluate_raw_and_ocr_rf(
         original,
         reader=reader,
         ocr_batch_size=int(args.ocr_batch_size),
         seed=int(args.rf_seed),
+        ocr_cache=ocr_cache,
     )
     generated_ocr.to_parquet(args.output_dir / "generated_validation_character_ocr.parquet", index=False)
     original_ocr.to_parquet(args.output_dir / "original_validation_character_ocr.parquet", index=False)

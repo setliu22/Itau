@@ -16,12 +16,15 @@ import numpy as np
 import pandas as pd
 
 from pipeline_common import (
+    CharacterOCRCache,
+    LegitScoreCache,
     SEEDS,
     SYNTH_ROOT,
     SPLIT_FILES,
     TrOCRTextReader,
     all_existing_fraudulent_keys,
     build_legit_scorer,
+    build_fixed_negative_evaluation_cache,
     append_trial_csv,
     assemble_replaced_split,
     evaluate_raw_and_ocr_rf,
@@ -29,6 +32,7 @@ from pipeline_common import (
     load_lookups,
     load_pair_frame,
     load_registry_keys,
+    penalized_rf_result,
     load_split,
     positive_legit_stats,
     save_registry,
@@ -47,6 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE"))
     parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
     parser.add_argument("--run-dir", type=Path, default=Path("generate_validation/runs/validation_replacement_optuna"))
+    parser.add_argument("--cache-dir", type=Path, default=Path(".cache/validation_generation"))
     parser.add_argument("--study-name", default="validation_replacement_optuna")
     parser.add_argument("--storage", default="sqlite:///generate_validation/runs/validation_replacement_optuna/study.db")
     parser.add_argument("--split", default="validation", choices=sorted(SPLIT_FILES))
@@ -218,6 +223,9 @@ def load_context(args: argparse.Namespace) -> dict[str, Any]:
             f"{args.input_dir / SPLIT_FILES[args.split]} has {len(original):,} rows; "
             f"expected {args.expected_rows:,}."
         )
+    cache_root = args.cache_dir if args.cache_dir.is_absolute() else SYNTH_ROOT / args.cache_dir
+    cache_dir = cache_root / args.study_name
+    cache_dir.mkdir(parents=True, exist_ok=True)
     lookups = load_lookups(args.lookup_dir)
     forbidden = all_existing_fraudulent_keys(args.input_dir)
     registry_path = args.output_dir / "generated_spoof_registry.parquet"
@@ -229,12 +237,24 @@ def load_context(args: argparse.Namespace) -> dict[str, Any]:
         device=args.device,
     )
     reader = TrOCRTextReader(model_name=args.ocr_model_name, device=args.device)
+    ocr_cache = CharacterOCRCache(cache_dir / "character_ocr_cache.parquet")
+    legit_score_cache = LegitScoreCache(cache_dir / "legit_pair_scores.parquet")
+    fixed_negative_cache = build_fixed_negative_evaluation_cache(
+        original,
+        reader=reader,
+        ocr_batch_size=int(args.ocr_batch_size),
+        ocr_cache=ocr_cache,
+    )
     return {
         "original": original,
         "lookups": lookups,
         "forbidden": forbidden,
         "legit_scorer": legit_scorer,
         "reader": reader,
+        "ocr_cache": ocr_cache,
+        "legit_score_cache": legit_score_cache,
+        "fixed_negative_cache": fixed_negative_cache,
+        "cache_dir": cache_dir,
         "registry_path": registry_path,
     }
 
@@ -256,6 +276,7 @@ def run_dataset_for_params(
         forbidden_fraudulent_keys=context["forbidden"],
         legit_scorer=context["legit_scorer"],
         legit_batch_size=int(args.legit_batch_size),
+        legit_score_cache=context["legit_score_cache"],
         generation_seed=int(args.generation_seed),
         trial_number=trial_number,
         legit_threshold=float(args.legit_threshold),
@@ -269,12 +290,24 @@ def run_dataset_for_params(
         audit=audit,
     )
     legit_stats = positive_legit_stats(audit)
-    raw_rf, ocr_rf, ocr_frame = evaluate_raw_and_ocr_rf(
-        dataset,
-        reader=context["reader"],
-        ocr_batch_size=int(args.ocr_batch_size),
-        seed=int(args.rf_seed),
-    )
+    rf_skip_reason = ""
+    if trial_number is not None and float(legit_stats["mean"]) < float(args.legit_threshold):
+        rf_skip_reason = (
+            f"positive LEGIT mean {float(legit_stats['mean']):.6f} below "
+            f"threshold {float(args.legit_threshold):.6f}"
+        )
+        raw_rf = penalized_rf_result(seed=int(args.rf_seed), reason=rf_skip_reason)
+        ocr_rf = penalized_rf_result(seed=int(args.rf_seed), reason=rf_skip_reason)
+        ocr_frame = pd.DataFrame(columns=dataset.columns)
+    else:
+        raw_rf, ocr_rf, ocr_frame = evaluate_raw_and_ocr_rf(
+            dataset,
+            reader=context["reader"],
+            ocr_batch_size=int(args.ocr_batch_size),
+            seed=int(args.rf_seed),
+            ocr_cache=context["ocr_cache"],
+            fixed_negative_cache=context["fixed_negative_cache"],
+        )
     t_rf = timing()
     timings = {
         "generation_and_legit": t_generation - t0,
@@ -291,6 +324,9 @@ def run_dataset_for_params(
         ocr_rf=ocr_rf,
         timings=timings,
     )
+    summary["legit_gate_passed"] = bool(float(legit_stats["mean"]) >= float(args.legit_threshold))
+    summary["rf_skipped_due_to_legit_gate"] = bool(rf_skip_reason)
+    summary["rf_skip_reason"] = rf_skip_reason
     payload = {
         "params": params,
         "dataset": dataset,
@@ -427,6 +463,12 @@ def write_manifest(args: argparse.Namespace, context: dict[str, Any]) -> None:
             "rf_seed": int(args.rf_seed),
         },
         "base_split_counts": split_count_payload,
+        "cache": {
+            "cache_dir": str(context.get("cache_dir")),
+            "character_ocr_cache": str(context.get("cache_dir") / "character_ocr_cache.parquet") if context.get("cache_dir") else None,
+            "legit_pair_score_cache": str(context.get("cache_dir") / "legit_pair_scores.parquet") if context.get("cache_dir") else None,
+            "fixed_negative_rows_cached": int(len(context["fixed_negative_cache"]["raw_frame"])),
+        },
         "active_lookup_counts": {
             "adjacent_real_names": len(context["lookups"]["adjacent"]),
             "adjacent_rules": int(sum(len(rules) for rules in context["lookups"]["adjacent"].values())),

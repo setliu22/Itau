@@ -27,6 +27,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 from evaluate_large_dataset_validation import (  # noqa: E402
     TrOCRTextReader,
     build_legit_scorer,
+    canonical_character_ocr_text,
     character_ocr_frame,
     to_jsonable,
 )
@@ -110,6 +111,134 @@ class Candidate:
     @property
     def total_modifications(self) -> int:
         return len(self.operations)
+
+
+class CharacterOCRCache:
+    """Persistent per-codepoint OCR normalization cache."""
+
+    def __init__(self, path: Path | None) -> None:
+        self.path = Path(path) if path is not None else None
+        self.mapping: dict[str, str] = {}
+        self.last_requested_count = 0
+        self.last_missing_count = 0
+        if self.path is not None and self.path.exists():
+            frame = pd.read_parquet(self.path)
+            if {"character", "normalized_character"}.issubset(frame.columns):
+                for row in frame[["character", "normalized_character"]].itertuples(index=False):
+                    self.mapping[str(row.character)] = "" if pd.isna(row.normalized_character) else str(row.normalized_character)
+
+    def save(self) -> None:
+        if self.path is None:
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        frame = pd.DataFrame(
+            [
+                {"character": character, "normalized_character": normalized}
+                for character, normalized in sorted(self.mapping.items())
+            ]
+        )
+        frame.to_parquet(self.path, index=False)
+
+    def ensure_texts(
+        self,
+        texts: list[str],
+        *,
+        reader: TrOCRTextReader,
+        batch_size: int,
+    ) -> int:
+        needed = sorted({char for text in texts for char in str(text) if not char.isspace()})
+        missing = [char for char in needed if char not in self.mapping]
+        self.last_requested_count = len(needed)
+        self.last_missing_count = len(missing)
+        if not missing:
+            return 0
+        outputs = reader.recognize_characterwise(missing, batch_size=int(batch_size), variations=[{}])
+        for char in missing:
+            values = outputs.get(char, [])
+            predicted = values[0] if values else ""
+            self.mapping[char] = canonical_character_ocr_text(predicted)
+        self.save()
+        return len(missing)
+
+    def normalize_text(self, text: Any) -> str:
+        return "".join(
+            self.mapping.get(char, canonical_character_ocr_text(char))
+            for char in str(text)
+            if not char.isspace()
+        )
+
+    def normalize_frame(
+        self,
+        frame: pd.DataFrame,
+        *,
+        reader: TrOCRTextReader,
+        batch_size: int,
+    ) -> pd.DataFrame:
+        texts = (
+            frame["fraudulent_name"].astype(str).tolist()
+            + frame["real_name"].astype(str).tolist()
+        )
+        self.ensure_texts(texts, reader=reader, batch_size=int(batch_size))
+        result = frame.copy()
+        result["fraudulent_name"] = result["fraudulent_name"].map(self.normalize_text)
+        result["real_name"] = result["real_name"].map(self.normalize_text)
+        return result
+
+
+class LegitScoreCache:
+    """Persistent cache for LEGIT scores keyed by full generated/original pair."""
+
+    def __init__(self, path: Path | None) -> None:
+        self.path = Path(path) if path is not None else None
+        self.mapping: dict[tuple[str, str], float] = {}
+        self.last_requested_count = 0
+        self.last_missing_count = 0
+        if self.path is not None and self.path.exists():
+            frame = pd.read_parquet(self.path)
+            required = {"fraudulent_name", "real_name", "legit_score"}
+            if required.issubset(frame.columns):
+                for row in frame[list(required)].itertuples(index=False):
+                    payload = row._asdict()
+                    self.mapping[(str(payload["fraudulent_name"]), str(payload["real_name"]))] = float(payload["legit_score"])
+
+    def save(self) -> None:
+        if self.path is None:
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        frame = pd.DataFrame(
+            [
+                {
+                    "fraudulent_name": fraudulent_name,
+                    "real_name": real_name,
+                    "legit_score": score,
+                }
+                for (fraudulent_name, real_name), score in self.mapping.items()
+            ]
+        )
+        frame.to_parquet(self.path, index=False)
+
+    def score_pairs(
+        self,
+        pairs: list[tuple[str, str]],
+        *,
+        scorer: Any,
+        batch_size: int,
+    ) -> np.ndarray:
+        normalized_pairs = [(str(fraudulent_name), str(real_name)) for fraudulent_name, real_name in pairs]
+        missing: list[tuple[str, str]] = []
+        seen_missing: set[tuple[str, str]] = set()
+        for key in normalized_pairs:
+            if key not in self.mapping and key not in seen_missing:
+                missing.append(key)
+                seen_missing.add(key)
+        self.last_requested_count = len(normalized_pairs)
+        self.last_missing_count = len(missing)
+        if missing:
+            scores = scorer.score_pairs(missing, batch_size=int(batch_size)).astype(float)
+            for key, score in zip(missing, scores):
+                self.mapping[key] = float(score)
+            self.save()
+        return np.asarray([self.mapping[key] for key in normalized_pairs], dtype=float)
 
 
 def clean_project_name(value: Any) -> str:
@@ -1006,11 +1135,13 @@ def generate_positive_replacements(
     forbidden_fraudulent_keys: set[str],
     legit_scorer: Any,
     legit_batch_size: int,
+    legit_score_cache: LegitScoreCache | None = None,
     generation_seed: int,
     trial_number: int | None = None,
     legit_threshold: float = 4.0,
     max_attempts_per_row: int = 1,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    generation_start = time.perf_counter()
     positives = original_frame.loc[original_frame["label"].eq(1.0)].copy()
     positives = positives.reset_index(drop=False).rename(columns={"index": "original_row_index"})
     real_names = positives["real_name"].astype(str).tolist()
@@ -1083,7 +1214,16 @@ def generate_positive_replacements(
 
     accepted_indices = sorted(accepted)
     legit_pairs = [(accepted[idx].generated, real_names[idx]) for idx in accepted_indices]
-    scores = legit_scorer.score_pairs(legit_pairs, batch_size=int(legit_batch_size)).astype(float)
+    legit_start = time.perf_counter()
+    if legit_score_cache is not None:
+        scores = legit_score_cache.score_pairs(
+            legit_pairs,
+            scorer=legit_scorer,
+            batch_size=int(legit_batch_size),
+        )
+    else:
+        scores = legit_scorer.score_pairs(legit_pairs, batch_size=int(legit_batch_size)).astype(float)
+    legit_end = time.perf_counter()
     for row_index, score in zip(accepted_indices, scores):
         accepted[row_index].legit_score = float(score)
 
@@ -1126,6 +1266,12 @@ def generate_positive_replacements(
     report["first_dropped_positive_indices"] = [int(idx) for idx in failures[:25]]
     report["legit_threshold"] = float(legit_threshold)
     report["below_legit_threshold_count"] = int((audit["positive_legit_score"].astype(float) < float(legit_threshold)).sum())
+    report["positive_generation_without_legit_seconds"] = float(legit_start - generation_start)
+    report["positive_legit_scoring_seconds"] = float(legit_end - legit_start)
+    if legit_score_cache is not None:
+        report["legit_score_cache_entries"] = int(len(legit_score_cache.mapping))
+        report["legit_score_cache_requested_pairs"] = int(legit_score_cache.last_requested_count)
+        report["legit_score_cache_missing_pairs"] = int(legit_score_cache.last_missing_count)
     return positive_frame, audit, report
 
 
@@ -1281,8 +1427,9 @@ def feature_matrix(frame: pd.DataFrame) -> np.ndarray:
     return np.column_stack(columns)
 
 
-def evaluate_random_forest_auc(
-    frame: pd.DataFrame,
+def evaluate_random_forest_auc_from_arrays(
+    features: np.ndarray,
+    labels: np.ndarray,
     *,
     seed: int,
     train_fraction: float = 0.9,
@@ -1292,7 +1439,10 @@ def evaluate_random_forest_auc(
     from sklearn.metrics import balanced_accuracy_score, roc_auc_score
     from sklearn.model_selection import train_test_split
 
-    labels = frame["label"].astype(float).to_numpy().astype(int)
+    labels = np.asarray(labels, dtype=int)
+    features = np.asarray(features, dtype=float)
+    if len(labels) != len(features):
+        raise ValueError(f"Feature/label length mismatch: {len(features)} features vs {len(labels)} labels.")
     indices = np.arange(len(labels))
     train_idx, holdout_idx = train_test_split(
         indices,
@@ -1300,7 +1450,6 @@ def evaluate_random_forest_auc(
         random_state=int(seed),
         stratify=labels,
     )
-    features = feature_matrix(frame)
     classifier = RandomForestClassifier(
         n_estimators=int(n_estimators),
         random_state=int(seed),
@@ -1344,16 +1493,134 @@ def evaluate_random_forest_auc(
     }
 
 
+def evaluate_random_forest_auc(
+    frame: pd.DataFrame,
+    *,
+    seed: int,
+    train_fraction: float = 0.9,
+    n_estimators: int = 400,
+    features: np.ndarray | None = None,
+) -> dict[str, Any]:
+    labels = frame["label"].astype(float).to_numpy().astype(int)
+    if features is None:
+        features = feature_matrix(frame)
+    return evaluate_random_forest_auc_from_arrays(
+        features,
+        labels,
+        seed=seed,
+        train_fraction=train_fraction,
+        n_estimators=n_estimators,
+    )
+
+
+def cached_character_ocr_frame(
+    frame: pd.DataFrame,
+    *,
+    reader: TrOCRTextReader,
+    batch_size: int,
+    cache: CharacterOCRCache | None = None,
+) -> pd.DataFrame:
+    if cache is None:
+        return character_ocr_frame(frame, reader=reader, batch_size=int(batch_size))
+    return cache.normalize_frame(frame, reader=reader, batch_size=int(batch_size))
+
+
+def build_fixed_negative_evaluation_cache(
+    original_frame: pd.DataFrame,
+    *,
+    reader: TrOCRTextReader,
+    ocr_batch_size: int,
+    ocr_cache: CharacterOCRCache | None = None,
+) -> dict[str, Any]:
+    negative_frame = original_frame.loc[original_frame["label"].eq(0.0), REQUIRED_COLUMNS].reset_index(drop=True)
+    negative_ocr_frame = cached_character_ocr_frame(
+        negative_frame,
+        reader=reader,
+        batch_size=int(ocr_batch_size),
+        cache=ocr_cache,
+    )
+    return {
+        "raw_frame": negative_frame,
+        "raw_features": feature_matrix(negative_frame),
+        "ocr_frame": negative_ocr_frame,
+        "ocr_features": feature_matrix(negative_ocr_frame),
+    }
+
+
+def penalized_rf_result(*, seed: int, reason: str) -> dict[str, Any]:
+    return {
+        "members": list(TEXT_METRICS),
+        "model": {
+            "type": "random_forest",
+            "n_estimators": 0,
+            "class_weight": "balanced_subsample",
+            "train_fraction": 0.9,
+            "seed": int(seed),
+            "skipped": True,
+            "skip_reason": reason,
+        },
+        "split": {
+            "train_rows": 0,
+            "holdout_rows": 0,
+            "seed": int(seed),
+        },
+        "roc_auc": 1.0,
+        "auc_predictability": 1.0,
+        "balanced_accuracy_at_0_5": 1.0,
+        "feature_importances": [],
+    }
+
+
 def evaluate_raw_and_ocr_rf(
     frame: pd.DataFrame,
     *,
     reader: TrOCRTextReader,
     ocr_batch_size: int,
     seed: int,
+    ocr_cache: CharacterOCRCache | None = None,
+    fixed_negative_cache: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], pd.DataFrame]:
-    raw = evaluate_random_forest_auc(frame, seed=seed)
-    ocr_frame = character_ocr_frame(frame, reader=reader, batch_size=int(ocr_batch_size))
-    ocr = evaluate_random_forest_auc(ocr_frame, seed=seed)
+    if fixed_negative_cache is None:
+        raw = evaluate_random_forest_auc(frame, seed=seed)
+        ocr_frame = cached_character_ocr_frame(
+            frame,
+            reader=reader,
+            batch_size=int(ocr_batch_size),
+            cache=ocr_cache,
+        )
+        ocr = evaluate_random_forest_auc(ocr_frame, seed=seed)
+        return raw, ocr, ocr_frame
+
+    positive_frame = frame.loc[frame["label"].eq(1.0), REQUIRED_COLUMNS].reset_index(drop=True)
+    raw_frame = pd.concat(
+        [positive_frame, fixed_negative_cache["raw_frame"]],
+        ignore_index=True,
+    )
+    raw_features = np.vstack(
+        [
+            feature_matrix(positive_frame),
+            np.asarray(fixed_negative_cache["raw_features"], dtype=float),
+        ]
+    )
+    raw = evaluate_random_forest_auc(raw_frame, seed=seed, features=raw_features)
+
+    positive_ocr_frame = cached_character_ocr_frame(
+        positive_frame,
+        reader=reader,
+        batch_size=int(ocr_batch_size),
+        cache=ocr_cache,
+    )
+    ocr_frame = pd.concat(
+        [positive_ocr_frame, fixed_negative_cache["ocr_frame"]],
+        ignore_index=True,
+    )
+    ocr_features = np.vstack(
+        [
+            feature_matrix(positive_ocr_frame),
+            np.asarray(fixed_negative_cache["ocr_features"], dtype=float),
+        ]
+    )
+    ocr = evaluate_random_forest_auc(ocr_frame, seed=seed, features=ocr_features)
     return raw, ocr, ocr_frame
 
 
@@ -1392,6 +1659,15 @@ def trial_summary_row(
         row[f"param_{key}"] = value
     for key, value in timings.items():
         row[f"time_{key}_seconds"] = float(value)
+    for key in [
+        "positive_generation_without_legit_seconds",
+        "positive_legit_scoring_seconds",
+        "legit_score_cache_entries",
+        "legit_score_cache_requested_pairs",
+        "legit_score_cache_missing_pairs",
+    ]:
+        if key in generation_report:
+            row[key] = generation_report[key]
     return row
 
 
