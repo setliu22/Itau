@@ -1,0 +1,4 @@
+source,replacement,source_character,replacement_character,family,direction,operation,LEGIT_q25,LEGIT_mean,LEGIT_median,LEGIT_min,LEGIT_max,num_scored_examples,meets_min_support,lookup_version,input_source,unicode_name
+d,cl,d,,multichar,forward,d_to_cl,0.9309850782155991,2.1423492950916625,2.226960301399231,-2.425858736038208,4.923629283905029,512,True,validation_scored_lookups_v2_2026_06_29,DONOTDELETE/multicharacter_substitution_lookup.parquet,
+m,rn,m,,multichar,forward,m_to_rn,2.3724522590637207,3.313894237216118,3.824714183807373,-1.2862461805343628,5.066990375518799,512,True,validation_scored_lookups_v2_2026_06_29,DONOTDELETE/multicharacter_substitution_lookup.parquet,
+w,vv,w,,multichar,forward,w_to_vv,2.937691807746887,3.538784505042713,3.887689709663391,-0.9783997535705566,4.922913074493408,512,True,validation_scored_lookups_v2_2026_06_29,DONOTDELETE/multicharacter_substitution_lookup.parquet,

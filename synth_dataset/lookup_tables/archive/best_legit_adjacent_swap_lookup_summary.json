@@ -1,0 +1,15 @@
+{
+  "aggregate_pairs_per_second": 71.8135594238343,
+  "aggregate_scoring_seconds": 7442.0625337034,
+  "candidate_pairs_scored": 534441,
+  "chunk_count": 14,
+  "columns": [
+    "real_name",
+    "swapped_name"
+  ],
+  "csv_path": "/orcd/home/002/setliu22/Itau/synth_dataset/DONOTDELETE/best_legit_adjacent_swap_lookup.csv",
+  "lookup_rows": 87337,
+  "names_without_valid_adjacent_swaps": 4221,
+  "parquet_path": "/orcd/home/002/setliu22/Itau/synth_dataset/DONOTDELETE/best_legit_adjacent_swap_lookup.parquet",
+  "status": "complete"
+}

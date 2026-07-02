@@ -1,0 +1,60 @@
+{
+  "base_counts": {
+    "test": {
+      "negative": 91745,
+      "positive": 165141,
+      "rows": 256886
+    },
+    "train": {
+      "negative": 348615,
+      "positive": 627507,
+      "rows": 976122
+    },
+    "validation": {
+      "negative": 3571,
+      "positive": 6428,
+      "rows": 9999
+    }
+  },
+  "counts": {
+    "test": {
+      "negative": 91745,
+      "positive": 165141,
+      "rows": 256886
+    },
+    "train": {
+      "negative": 348615,
+      "positive": 627507,
+      "rows": 976122
+    },
+    "validation": {
+      "negative": 3571,
+      "positive": 6428,
+      "rows": 9999
+    }
+  },
+  "generated_real_name_overlap": {
+    "test_validation": 0,
+    "train_test": 0,
+    "train_validation": 0
+  },
+  "global_unique_positive_fraudulent_names": 799076,
+  "negative_bucket_count": 45,
+  "negative_neighbor_method": "rapidfuzz_length_bucket_nearest_mix12",
+  "outputs": {
+    "output_dir": "generated_datasets/mix65",
+    "output_dir": "generated_datasets/mix65"
+  },
+  "pool_sizes": {
+    "test": 18349,
+    "train": 69723,
+    "validation": 3488
+  },
+  "positive_distance_2_probability": 0.65,
+  "real_name_overlap": {
+    "test_validation": 0,
+    "train_test": 0,
+    "train_validation": 0
+  },
+  "strategy": "mix65_full_splits_disjoint_real_names"
+}

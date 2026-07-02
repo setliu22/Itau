@@ -10,7 +10,7 @@
 set -euo pipefail
 
 cd /home/setliu22/Itau/synth_dataset
-mkdir -p logs NEW_RESULTS/paper_negative_example_legit .cache/matplotlib .cache/huggingface
+mkdir -p logs model_results/mix65/paper_negative_example_legit .cache/matplotlib .cache/huggingface
 
 PYTHON=/home/setliu22/.conda/envs/itau/bin/python
 CONDA_PREFIX=/home/setliu22/.conda/envs/itau
@@ -31,7 +31,7 @@ export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_HOME/hub}"
   generate_validation/score_paper_negative_examples_legit.py
 
 "$PYTHON" generate_validation/score_paper_negative_examples_legit.py \
-  --output-dir NEW_RESULTS/paper_negative_example_legit \
+  --output-dir model_results/mix65/paper_negative_example_legit \
   --model-path models/LEGIT-TrOCR-MT \
   --font-path fonts/unifont-17.0.04.otf \
   --device cpu \

@@ -10,7 +10,7 @@
 set -euo pipefail
 
 cd /home/setliu22/Itau/synth_dataset
-mkdir -p logs NEW_DATASETS_DO_NOT_EVER_DELETE large_dataset .cache/matplotlib
+mkdir -p logs generated_datasets/mix65 .cache/matplotlib
 
 PYTHON=/home/setliu22/.conda/envs/itau/bin/python
 CONDA_PREFIX=/home/setliu22/.conda/envs/itau
@@ -27,11 +27,10 @@ export MPLCONFIGDIR=/home/setliu22/Itau/synth_dataset/.cache/matplotlib
 
 "$PYTHON" generate_validation/build_mix65_full_splits.py \
   --input-dir BASE_DATASETS_DO_NOT_EVER_DELETE \
-  --output-dir NEW_DATASETS_DO_NOT_EVER_DELETE \
-  --large-dataset-dir large_dataset \
-  --lookup-dir LOOKUP_TABLE_IN_USE \
-  --old-exact-lookup DONOTDELETE/dejavu_sans_exact_lookalike_lookup.parquet \
-  --unique-real-names DONOTDELETE/unique_real_names_no_single_char_hyphen_prefix.parquet \
+  --output-dir generated_datasets/mix65 \
+  --lookup-dir lookup_tables/in_use \
+  --old-exact-lookup lookup_tables/archive/dejavu_sans_exact_lookalike_lookup.csv \
+  --unique-real-names inputs/unique_real_names_no_single_char_hyphen_prefix.parquet \
   --max-positive-edits 2 \
   --preferred-positive-distance-2-probability 0.65 \
   --negative-target-policy mix12 \

@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input-dir", type=Path, default=Path("BASE_DATASETS_DO_NOT_EVER_DELETE"))
     parser.add_argument("--split", default="validation")
     parser.add_argument("--unique-real-names", type=Path, default=Path("DONOTDELETE/unique_real_names_no_single_char_hyphen_prefix.parquet"))
-    parser.add_argument("--output", type=Path, default=Path("LOOKUP_TABLE_IN_USE/validation_nearest_real_name_neighbors.parquet"))
+    parser.add_argument("--output", type=Path, default=Path("lookup_tables/in_use/validation_nearest_real_name_neighbors.parquet"))
     parser.add_argument("--target-scope", choices=["all", "negatives", "positives"], default="all")
     parser.add_argument("--top-k", type=int, default=512)
     parser.add_argument("--max-distance", type=int, default=5)

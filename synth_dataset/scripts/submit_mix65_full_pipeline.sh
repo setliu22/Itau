@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd /home/setliu22/Itau/synth_dataset
-mkdir -p logs NEW_RESULTS
+mkdir -p logs model_results/mix65
 
 GEN_SUBMIT=$(sbatch --parsable scripts/slurm_build_mix65_full_splits.sbatch)
 GEN_JOB_ID="${GEN_SUBMIT%%;*}"

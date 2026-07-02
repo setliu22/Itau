@@ -42,10 +42,10 @@ TEXT_METRICS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--better-validation", type=Path, default=Path("large_dataset/BETTER_VALIDATION.parquet"))
+    parser.add_argument("--better-validation", type=Path, default=Path("generated_datasets/mix65/validation.parquet"))
     parser.add_argument("--original-validation", type=Path, default=Path("inputs/validate_pairs_ref_10k.parquet"))
-    parser.add_argument("--output-dir", type=Path, default=Path("large_dataset/validation_analysis"))
-    parser.add_argument("--final-text", type=Path, default=Path("large_dataset/FINALVALIDATIONCOMPARISON.txt"))
+    parser.add_argument("--output-dir", type=Path, default=Path("generated_datasets/mix65/validation_analysis"))
+    parser.add_argument("--final-text", type=Path, default=Path("generated_datasets/mix65/FINALVALIDATIONCOMPARISON.txt"))
     parser.add_argument("--legit-model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))
     parser.add_argument("--legit-font-path", type=Path, default=Path("temp_experiments/unifont-17.0.04.otf"))
     parser.add_argument("--legit-processor-name", default="microsoft/trocr-base-handwritten")

@@ -95,8 +95,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path, default=Path("BASE_DATASETS_DO_NOT_EVER_DELETE"))
     parser.add_argument("--output-dir", type=Path, default=Path("generate_validation/runs/bktree_negative_trials"))
-    parser.add_argument("--publish-best-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE"))
-    parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
+    parser.add_argument("--publish-best-dir", type=Path, default=Path("generated_datasets/mix65"))
+    parser.add_argument("--lookup-dir", type=Path, default=Path("lookup_tables/in_use"))
     parser.add_argument("--old-exact-lookup", type=Path, default=Path("DONOTDELETE/dejavu_sans_exact_lookalike_lookup.parquet"))
     parser.add_argument("--unique-real-names", type=Path, default=Path("DONOTDELETE/unique_real_names_no_single_char_hyphen_prefix.parquet"))
     parser.add_argument("--split", default="validation")
@@ -268,14 +268,14 @@ def run_trial(
     raw_rf, ocr_rf, ocr_frame = evaluate_raw_and_ocr_rf(dataset, seed=int(rf_seed), ocr_normalizer=normalizer)
     trial_dir = output_dir / policy
     trial_dir.mkdir(parents=True, exist_ok=True)
-    dataset.to_parquet(trial_dir / "BETTER_VALIDATION.parquet", index=False)
-    positive_frame.to_parquet(trial_dir / "GENERATED_VALIDATION_POSITIVES.parquet", index=False)
-    negative_frame.to_parquet(trial_dir / "GENERATED_VALIDATION_NEGATIVES.parquet", index=False)
-    positive_audit.to_parquet(trial_dir / "VALIDATION_POSITIVE_GENERATION_AUDIT.parquet", index=False)
-    negative_audit.to_parquet(trial_dir / "VALIDATION_NEGATIVE_GENERATION_AUDIT.parquet", index=False)
-    ocr_frame.to_parquet(trial_dir / "VALIDATION_TABLE_OCR_NORMALIZED.parquet", index=False)
+    dataset.to_parquet(trial_dir / "validation.parquet", index=False)
+    positive_frame.to_parquet(trial_dir / "generated_validation_positives.parquet", index=False)
+    negative_frame.to_parquet(trial_dir / "generated_validation_negatives.parquet", index=False)
+    positive_audit.to_parquet(trial_dir / "validation_positive_generation_audit.parquet", index=False)
+    negative_audit.to_parquet(trial_dir / "validation_negative_generation_audit.parquet", index=False)
+    ocr_frame.to_parquet(trial_dir / "validation_table_ocr_normalized.parquet", index=False)
     examples = representative_examples(positive_frame, positive_audit, seed=SEEDS["representative_examples"])
-    examples.to_csv(trial_dir / "FINAL_VISUAL_HARDNEG_EXAMPLES.csv", index=False)
+    examples.to_csv(trial_dir / "validation_example_pairs.csv", index=False)
     metrics = {
         "policy": policy,
         "strategy": "bktree_exact_negative_distance_trial",
@@ -299,14 +299,14 @@ def run_trial(
         "raw_rf": raw_rf,
         "ocr_rf": ocr_rf,
         "outputs": {
-            "validation": str(trial_dir / "BETTER_VALIDATION.parquet"),
-            "positive_audit": str(trial_dir / "VALIDATION_POSITIVE_GENERATION_AUDIT.parquet"),
-            "negative_audit": str(trial_dir / "VALIDATION_NEGATIVE_GENERATION_AUDIT.parquet"),
+            "validation": str(trial_dir / "validation.parquet"),
+            "positive_audit": str(trial_dir / "validation_positive_generation_audit.parquet"),
+            "negative_audit": str(trial_dir / "validation_negative_generation_audit.parquet"),
         },
         "positive_generation": positive_generation,
     }
     write_json(trial_dir / "validation_generation_metrics.json", metrics)
-    (trial_dir / "FINAL_VISUAL_HARDNEG_REPORT.txt").write_text(
+    (trial_dir / "validation_generation_report.txt").write_text(
         render_report(to_jsonable(metrics), examples),
         encoding="utf-8",
     )

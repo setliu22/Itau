@@ -40,7 +40,7 @@ EXAMPLES = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output-dir", type=Path, default=Path("NEW_RESULTS/paper_example_legit"))
+    parser.add_argument("--output-dir", type=Path, default=Path("model_results/mix65/paper_positive_example_legit"))
     parser.add_argument("--model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))
     parser.add_argument("--font-path", type=Path, default=Path("fonts/unifont-17.0.04.otf"))
     parser.add_argument("--processor-name", default="microsoft/trocr-base-handwritten")
@@ -94,9 +94,9 @@ def main() -> int:
         )
 
     frame = pd.DataFrame(rows)
-    frame.to_parquet(args.output_dir / "paper_example_legit_scores.parquet", index=False)
-    frame.to_csv(args.output_dir / "paper_example_legit_scores.csv", index=False)
-    (args.output_dir / "paper_example_legit_scores.json").write_text(
+    frame.to_parquet(args.output_dir / "paper_positive_example_legit_scores.parquet", index=False)
+    frame.to_csv(args.output_dir / "paper_positive_example_legit_scores.csv", index=False)
+    (args.output_dir / "paper_positive_example_legit_scores.json").write_text(
         json.dumps(frame.to_dict(orient="records"), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -109,7 +109,7 @@ def main() -> int:
         lines.append(f"  delta:       {row.regenerated_minus_previous_legit:+.6f}")
         lines.append("")
     text = "\n".join(lines).rstrip() + "\n"
-    (args.output_dir / "paper_example_legit_scores.txt").write_text(text, encoding="utf-8")
+    (args.output_dir / "paper_positive_example_legit_scores.txt").write_text(text, encoding="utf-8")
     print(text, flush=True)
     return 0
 

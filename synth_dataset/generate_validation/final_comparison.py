@@ -28,13 +28,13 @@ from pipeline_common import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--generated-validation", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/BETTER_VALIDATION.parquet"))
+    parser.add_argument("--generated-validation", type=Path, default=Path("generated_datasets/mix65/validation.parquet"))
     parser.add_argument("--original-validation", type=Path, default=Path("BASE_DATASETS_DO_NOT_EVER_DELETE/validate"))
     parser.add_argument("--previous-generated-validation", type=Path, default=None)
-    parser.add_argument("--audit", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/VALIDATION_POSITIVE_GENERATION_AUDIT.parquet"))
-    parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison"))
-    parser.add_argument("--output-text", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/FINALVALIDATIONCOMPARISON.txt"))
-    parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
+    parser.add_argument("--audit", type=Path, default=Path("generated_datasets/mix65/validation_positive_generation_audit.parquet"))
+    parser.add_argument("--output-dir", type=Path, default=Path("generated_datasets/mix65/final_validation_comparison"))
+    parser.add_argument("--output-text", type=Path, default=Path("generated_datasets/mix65/final_validation_comparison.txt"))
+    parser.add_argument("--lookup-dir", type=Path, default=Path("lookup_tables/in_use"))
     parser.add_argument("--legit-cache", type=Path, default=Path(".cache/validation_generation/final_comparison_legit_scores.parquet"))
     parser.add_argument("--max-examples", type=int, default=50)
     parser.add_argument("--legit-model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))

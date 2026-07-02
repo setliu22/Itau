@@ -11,7 +11,7 @@
 set -euo pipefail
 
 cd /home/setliu22/Itau/synth_dataset
-mkdir -p logs NEW_RESULTS .cache/matplotlib
+mkdir -p logs model_results/mix65 .cache/matplotlib
 
 PYTHON=/home/setliu22/.conda/envs/itau/bin/python
 CONDA_PREFIX=/home/setliu22/.conda/envs/itau
@@ -51,10 +51,10 @@ PY
 "$PYTHON" -m py_compile scripts/train_large_dataset_models.py
 
 "$PYTHON" scripts/train_large_dataset_models.py \
-  --train large_dataset/BETTER_TRAIN.parquet \
-  --test large_dataset/BETTER_TEST.parquet \
-  --validation large_dataset/BETTER_VALIDATION.parquet \
-  --output-dir NEW_RESULTS \
+  --train generated_datasets/mix65/train.parquet \
+  --test generated_datasets/mix65/test.parquet \
+  --validation generated_datasets/mix65/validation.parquet \
+  --output-dir model_results/mix65 \
   --external-repo /home/setliu22/fine-grained-homoglyph-detection \
   --device cuda \
   --models "$MODEL_KEY"

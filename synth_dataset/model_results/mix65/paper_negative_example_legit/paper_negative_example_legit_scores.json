@@ -1,0 +1,26 @@
+[
+  {
+    "real_name": "leadlovers",
+    "previous_negative_candidate": "spirituàl-ŗesearchfoundation",
+    "previous_legit": 0.8528934717178345,
+    "regenerated_negative_candidate": "steaklovers",
+    "regenerated_legit": 4.612298965454102,
+    "regenerated_minus_previous_legit": 3.759405493736267
+  },
+  {
+    "real_name": "php-fig",
+    "previous_negative_candidate": "lhotellarie-restauraationn",
+    "previous_legit": 0.6676804423332214,
+    "regenerated_negative_candidate": "hi-fi",
+    "regenerated_legit": 1.1518945693969727,
+    "regenerated_minus_previous_legit": 0.4842141270637512
+  },
+  {
+    "real_name": "dpam",
+    "previous_negative_candidate": "2chkovvaihànashi-matomē",
+    "previous_legit": 0.5236823558807373,
+    "regenerated_negative_candidate": "epam",
+    "regenerated_legit": -0.2729344367980957,
+    "regenerated_minus_previous_legit": -0.796616792678833
+  }
+]

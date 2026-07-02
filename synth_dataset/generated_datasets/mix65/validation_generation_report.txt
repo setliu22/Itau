@@ -1,0 +1,55 @@
+FINAL VISUAL HARD-NEGATIVE VALIDATION REPORT
+
+Generated validation: generated_datasets/mix65/validation.parquet
+Counts: {'rows': 9999, 'positive': 6428, 'negative': 3571}
+Original counts: {'rows': 9999, 'positive': 6428, 'negative': 3571}
+
+Text-distance RF ROC AUC
+Raw: 0.8620546197
+OCR-normalized-table: 0.9189787890
+
+Distance summaries
+Generated positives: {'lev_mean': 1.6583696328562538, 'lev_q25': 1.0, 'lev_median': 2.0, 'lev_q75': 2.0, 'rel_lev_mean': 0.21640363243394198, 'rel_lev_median': 0.18181818181818182}
+Generated negatives: {'lev_mean': 3.1683001960235226, 'lev_q25': 2.0, 'lev_median': 3.0, 'lev_q75': 4.0, 'rel_lev_mean': 0.3382313094342151, 'rel_lev_median': 0.3333333333333333}
+Original positives: {'lev_mean': 2.141568139390168, 'lev_q25': 1.0, 'lev_median': 2.0, 'lev_q75': 3.0, 'rel_lev_mean': 0.25723421313934147, 'rel_lev_median': 0.22474747474747475}
+Original negatives: {'lev_mean': 4.894147297675721, 'lev_q25': 3.0, 'lev_median': 4.0, 'lev_q75': 6.0, 'rel_lev_mean': 0.5365851728958754, 'rel_lev_median': 0.5454545454545454}
+
+Positive generation
+{
+  "generated_positive_rows": 6428,
+  "original_positive_failures": 76,
+  "original_positive_rows": 6428,
+  "unique_name_fill_rows": 76
+}
+
+Examples
+mcdonalds -> mcdonǝlds | original_positive | d=1
+demo4leotheme -> demо4ƚeotheme | original_positive | d=2
+southwesttrains -> southwesttraıns | original_positive | d=1
+ijnet -> ijпet | original_positive | d=1
+weavesilk -> weǝvesılk | original_positive | d=2
+starblogs -> stǝrblogs | original_positive | d=1
+peteducation -> peteducǝtıon | original_positive | d=2
+w8statistics -> w8statıstıcs | original_positive | d=2
+superleaguegreece -> superƚeǝguegreece | original_positive | d=2
+historyvshollywood -> hıstoryvsholƚywood | original_positive | d=2
+zie -> ᴢıe | original_positive | d=2
+fresong -> fresoпg | original_positive | d=1
+sscadda -> sscǝddə | original_positive | d=2
+popmatters -> pοpmǝtters | original_positive | d=2
+89wx -> 89ԝx | original_positive | d=1
+myemma -> mуemmǝ | original_positive | d=2
+flatmates -> flǝtmətes | original_positive | d=2
+rjc -> rϳᴄ | original_positive | d=2
+thefederalistpapers -> thefederalıstpapers | original_positive | d=1
+100sp -> 10߀ѕp | original_positive | d=2
+driverwhiz -> drıverԝhiz | original_positive | d=2
+eslprintables -> eslprintǝbles | original_positive | d=1
+adtiger -> ǝdtıger | original_positive | d=2
+boomproxy -> bοоmproxy | original_positive | d=2
+dijiuke -> dijıսke | original_positive | d=2
+joxi -> joxı | original_positive | d=1
+avherald -> ǝvherəld | original_positive | d=2
+myrecharge -> myrechәrge | original_positive | d=1
+indiafreestuff -> ındiǝfreestuff | original_positive | d=2
+bookmarkelink -> bookmǝrkelink | original_positive | d=1

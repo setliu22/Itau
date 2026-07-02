@@ -40,7 +40,7 @@ EXAMPLES = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output-dir", type=Path, default=Path("NEW_RESULTS/paper_negative_example_legit"))
+    parser.add_argument("--output-dir", type=Path, default=Path("model_results/mix65/paper_negative_example_legit"))
     parser.add_argument("--model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))
     parser.add_argument("--font-path", type=Path, default=Path("fonts/unifont-17.0.04.otf"))
     parser.add_argument("--processor-name", default="microsoft/trocr-base-handwritten")

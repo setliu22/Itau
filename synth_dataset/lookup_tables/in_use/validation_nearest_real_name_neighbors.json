@@ -1,0 +1,10 @@
+{
+  "targets":2416,
+  "unique_names":87211,
+  "rows":1084636,
+  "top_k":512,
+  "max_distance":5,
+  "fallback_distance":8,
+  "length_window":5,
+  "output":"lookup_tables/in_use\/validation_nearest_real_name_neighbors.parquet"
+}

@@ -29,8 +29,8 @@ from pipeline_common import (  # noqa: E402
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/version_comparison"))
-    parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
+    parser.add_argument("--output-dir", type=Path, default=Path("generated_datasets/mix65/version_comparison"))
+    parser.add_argument("--lookup-dir", type=Path, default=Path("lookup_tables/in_use"))
     parser.add_argument("--legit-cache", type=Path, default=Path(".cache/validation_generation/final_comparison_legit_scores.parquet"))
     parser.add_argument("--legit-model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))
     parser.add_argument("--legit-font-path", type=Path, default=Path("fonts/unifont-17.0.04.otf"))
@@ -44,10 +44,7 @@ def parse_args() -> argparse.Namespace:
 def version_specs() -> list[tuple[str, Path]]:
     return [
         ("original", Path("BASE_DATASETS_DO_NOT_EVER_DELETE/validate")),
-        ("old_backtrack_incomplete", Path("BACKTRACK_JUST_IN_CASE/BETTER_VALIDATION.parquet")),
-        ("nearest_d1", Path("BACKTRACK_JUST_IN_CASE/final_visual_nearest_16976636/BETTER_VALIDATION.parquet")),
-        ("nearest_d2", Path("BACKTRACK_JUST_IN_CASE/final_visual_nearest_d2_16982763/BETTER_VALIDATION.parquet")),
-        ("nearest_mix65", Path("NEW_DATASETS_DO_NOT_EVER_DELETE/BETTER_VALIDATION.parquet")),
+        ("nearest_mix65", Path("generated_datasets/mix65/validation.parquet")),
     ]
 
 

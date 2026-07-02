@@ -1,0 +1,23 @@
+run_name: conv1d_bilstm
+data:
+  train_pkl: model_results/mix65/pkl_splits/train.pkl
+  val_pkl: model_results/mix65/pkl_splits/validation.pkl
+  test_pkl: model_results/mix65/pkl_splits/test.pkl
+rendering:
+  height: 32
+  background: black
+slicing:
+  slice_width: 6
+  stride: 6
+  remove_padding: false
+  pad_to_width: null
+model:
+  encoder_type: bilstm
+  embed_dim: 128
+  pooling: mean
+training:
+  num_epochs: 20
+  batch_size: 64
+  lr: 0.001
+  num_workers: 4
+  seed: 7

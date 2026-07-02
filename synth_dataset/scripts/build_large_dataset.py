@@ -96,7 +96,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reviewed-ocr-confusables", type=Path, default=Path("../data/substitutions/ocr_confusable_legit_reviewed.csv"))
     parser.add_argument("--ranked-ocr-confusables", type=Path, default=Path("../data/substitutions/ocr_confusable_legit_ranked.parquet"))
     parser.add_argument("--ocr-atlas", type=Path, default=Path("../.cache/ocr_atlas/dejavu_trocr_white_on_black_confusion_atlas.parquet"))
-    parser.add_argument("--output-dir", type=Path, default=Path("large_dataset"))
+    parser.add_argument("--output-dir", type=Path, default=Path("generated_datasets/mix65"))
     parser.add_argument("--manual-ocr-output-parquet", type=Path, default=Path("DONOTDELETE/manual_ocr_confusable_substitutions.parquet"))
     parser.add_argument("--manual-ocr-output-csv", type=Path, default=Path("DONOTDELETE/manual_ocr_confusable_substitutions.csv"))
     parser.add_argument("--combined-ocr-output-parquet", type=Path, default=Path("DONOTDELETE/combined_ocr_confusable_substitution_lookup.parquet"))
@@ -213,10 +213,10 @@ def main() -> int:
     one_big = one_big.sample(frac=1.0, random_state=int(rng.integers(0, 2**31 - 1))).reset_index(drop=True)
 
     paths = {
-        "one_big": args.output_dir / "ONEBIGFILE.parquet",
-        "train": args.output_dir / "BETTER_TRAIN.parquet",
-        "test": args.output_dir / "BETTER_TEST.parquet",
-        "validation": args.output_dir / "BETTER_VALIDATION.parquet",
+        "one_big": args.output_dir / "all_splits.parquet",
+        "train": args.output_dir / "train.parquet",
+        "test": args.output_dir / "test.parquet",
+        "validation": args.output_dir / "validation.parquet",
         "audit": args.output_dir / "positive_generation_audit.parquet",
         "manifest": args.output_dir / "manifest.json",
     }

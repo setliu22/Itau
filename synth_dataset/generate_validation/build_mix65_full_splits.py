@@ -29,18 +29,17 @@ from build_final_visual_hardneg_validation import (  # noqa: E402
 from pipeline_common import REQUIRED_COLUMNS, SEEDS, split_counts, uniqueness_key, write_json  # noqa: E402
 
 
-SPLIT_TO_FILE = {"train": "BETTER_TRAIN.parquet", "test": "BETTER_TEST.parquet", "validation": "BETTER_VALIDATION.parquet"}
+SPLIT_TO_FILE = {"train": "train.parquet", "test": "test.parquet", "validation": "validation.parquet"}
 BASE_FILES = {"train": "train", "test": "test", "validation": "validate"}
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path, default=Path("BASE_DATASETS_DO_NOT_EVER_DELETE"))
-    parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE"))
-    parser.add_argument("--large-dataset-dir", type=Path, default=Path("large_dataset"))
-    parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
-    parser.add_argument("--old-exact-lookup", type=Path, default=Path("DONOTDELETE/dejavu_sans_exact_lookalike_lookup.parquet"))
-    parser.add_argument("--unique-real-names", type=Path, default=Path("DONOTDELETE/unique_real_names_no_single_char_hyphen_prefix.parquet"))
+    parser.add_argument("--output-dir", type=Path, default=Path("generated_datasets/mix65"))
+    parser.add_argument("--lookup-dir", type=Path, default=Path("lookup_tables/in_use"))
+    parser.add_argument("--old-exact-lookup", type=Path, default=Path("lookup_tables/archive/dejavu_sans_exact_lookalike_lookup.csv"))
+    parser.add_argument("--unique-real-names", type=Path, default=Path("inputs/unique_real_names_no_single_char_hyphen_prefix.parquet"))
     parser.add_argument("--seed", type=int, default=SEEDS["spoof_generation"])
     parser.add_argument("--max-positive-edits", type=int, default=2)
     parser.add_argument("--preferred-positive-distance-2-probability", type=float, default=0.65)
@@ -311,7 +310,6 @@ def generate_split(
 def main() -> int:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    args.large_dataset_dir.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(int(args.seed))
     counts = base_counts(args.input_dir)
     base_names = collect_base_real_names(args.input_dir)
@@ -359,7 +357,6 @@ def main() -> int:
         neg_audits.append(neg_audit)
         out_name = SPLIT_TO_FILE[split]
         dataset.to_parquet(args.output_dir / out_name, index=False)
-        dataset.to_parquet(args.large_dataset_dir / out_name, index=False)
     generated_real_name_sets = {
         split: set(datasets[split]["real_name"].map(uniqueness_key))
         for split in datasets
@@ -372,10 +369,9 @@ def main() -> int:
     if any(generated_overlaps.values()):
         raise RuntimeError(f"Generated real-name overlap detected: {generated_overlaps}")
     one_big = pd.concat([datasets[split].assign(split=split) for split in ["train", "test", "validation"]], ignore_index=True)
-    one_big.to_parquet(args.output_dir / "ONEBIGFILE.parquet", index=False)
-    one_big.to_parquet(args.large_dataset_dir / "ONEBIGFILE.parquet", index=False)
-    pd.concat(pos_audits, ignore_index=True).to_parquet(args.output_dir / "FULL_POSITIVE_GENERATION_AUDIT.parquet", index=False)
-    pd.concat(neg_audits, ignore_index=True).to_parquet(args.output_dir / "FULL_NEGATIVE_GENERATION_AUDIT.parquet", index=False)
+    one_big.to_parquet(args.output_dir / "all_splits.parquet", index=False)
+    pd.concat(pos_audits, ignore_index=True).to_parquet(args.output_dir / "positive_generation_audit.parquet", index=False)
+    pd.concat(neg_audits, ignore_index=True).to_parquet(args.output_dir / "negative_generation_audit.parquet", index=False)
     metrics = {
         "strategy": "mix65_full_splits_disjoint_real_names",
         "counts": {split: split_counts(frame) for split, frame in datasets.items()},
@@ -389,11 +385,9 @@ def main() -> int:
         "global_unique_positive_fraudulent_names": int(len(global_positive_fraud_keys)),
         "outputs": {
             "output_dir": str(args.output_dir),
-            "large_dataset_dir": str(args.large_dataset_dir),
         },
     }
-    write_json(args.output_dir / "FULL_DATASET_GENERATION_METRICS.json", metrics)
-    write_json(args.large_dataset_dir / "FULL_DATASET_GENERATION_METRICS.json", metrics)
+    write_json(args.output_dir / "generation_metrics.json", metrics)
     print(json.dumps(metrics, indent=2, sort_keys=True), flush=True)
     return 0
 

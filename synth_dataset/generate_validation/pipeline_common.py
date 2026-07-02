@@ -1099,12 +1099,22 @@ def generate_uniqueness_fallback(
 
 
 def operation_family_counts(operations: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {"adjacent": 0, "multichar_forward": 0, "ocr": 0, "exact": 0}
+    counts = {
+        "adjacent": 0,
+        "multichar_forward": 0,
+        "ocr": 0,
+        "exact": 0,
+        "insertion": 0,
+        "deletion": 0,
+        "duplication": 0,
+        "ascii": 0,
+        "keyboard": 0,
+    }
     for op in operations:
         family = str(op.get("family", ""))
         if family in counts:
             counts[family] += 1
-    counts["total"] = sum(counts.values())
+    counts["total"] = len(operations)
     return counts
 
 
@@ -1137,6 +1147,11 @@ def candidate_to_audit(
         "multichar_forward": int(counts["multichar_forward"]),
         "ocr_substitutions": int(counts["ocr"]),
         "exact_lookalikes": int(counts["exact"]),
+        "insertions": int(counts["insertion"]),
+        "deletions": int(counts["deletion"]),
+        "duplications": int(counts["duplication"]),
+        "ascii_substitutions": int(counts["ascii"]),
+        "keyboard_substitutions": int(counts["keyboard"]),
         "normalized_fraudulent_key": uniqueness_key(candidate.generated),
     }
 

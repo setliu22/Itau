@@ -1,0 +1,5 @@
+source_character,replacement_character,primary_sub,unicode_name,example_original_text,example_substituted_text,source,review_label,legit_q25,ocr_attack_contexts,visual_similarity_score,replacement_codepoint,generation_score
+a,ǝ,,LATIN SMALL LETTER TURNED E,,,reviewed_csv,keep,3.9359090328216553,3.0,0.8225683569908142,U+01DD,89.94386422634125
+l,ߙ,,NKO LETTER RA,,,reviewed_csv,keep,4.233971834182739,4.0,0.653887927532196,U+07D9,95.21831595897675
+n,п,,CYRILLIC SMALL LETTER PE,,,reviewed_csv,keep,3.334880113601685,2.0,0.8452087044715881,U+043F,77.14968931674959
+v,ⱴ,,LATIN SMALL LETTER V WITH CURL,,,reviewed_csv,keep,3.426345646381378,2.0,0.5539165139198303,U+2C74,76.06607806682587

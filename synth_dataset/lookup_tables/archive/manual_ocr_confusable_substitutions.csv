@@ -1,0 +1,22 @@
+source_character,replacement_character,primary_sub,unicode_name,example_original_text,example_substituted_text,source,review_label
+a,ǝ,e,LATIN SMALL LETTER TURNED E,grammarly,grǝmmarly,manual_user_2026_06_26,keep
+a,ə,e,LATIN SMALL LETTER SCHWA,egovtjobalert,egovtjobəlert,manual_user_2026_06_26,keep
+a,ә,e,CYRILLIC SMALL LETTER SCHWA,marketingandweb,mәrketingandweb,manual_user_2026_06_26,keep
+b,ե,u,ARMENIAN SMALL LETTER ECH,arobasenet,aroեasenet,manual_user_2026_06_26,keep
+d,մ,u,ARMENIAN SMALL LETTER MEN,gameduell,gameմuell,manual_user_2026_06_26,keep
+e,ɵ,o,LATIN SMALL LETTER BARRED O,templatemag,templatɵmag,manual_user_2026_06_26,keep
+e,ѳ,o,CYRILLIC SMALL LETTER FITA,eyebuydirect,eyѳbuydirect,manual_user_2026_06_26,keep
+e,ө,o,CYRILLIC SMALL LETTER BARRED O,distilnetworks,distilnөtworks,manual_user_2026_06_26,keep
+i,ı,l,LATIN SMALL LETTER DOTLESS I,deolhonocariri,deolhonocarıri,manual_user_2026_06_26,keep
+l,ƚ,i,LATIN SMALL LETTER L WITH BAR,hilton,hiƚton,manual_user_2026_06_26,keep
+l,𝗅,j,MATHEMATICAL SANS-SERIF SMALL L,carcomplaints,carcomp𝗅aints,manual_user_2026_06_26,keep
+n,п,r,CYRILLIC SMALL LETTER PE,easycron,easycroп,manual_user_2026_06_26,keep
+n,ᴨ,r,GREEK LETTER SMALL CAPITAL PI,thebestspinner,thebestspinᴨer,manual_user_2026_06_26,keep
+o,ɑ,d,LATIN SMALL LETTER ALPHA,deolhonocariri,deɑlhonocariri,manual_user_2026_06_26,keep
+o,ɢ,c,LATIN LETTER SMALL CAPITAL G,yoocel,yoɢcel,manual_user_2026_06_26,keep
+o,ם,n,HEBREW LETTER FINAL MEM,deolhonocariri,deםlhonocariri,manual_user_2026_06_26,keep
+p,ր,h,ARMENIAN SMALL LETTER REH,carcomplaints,carcomրlaints,manual_user_2026_06_26,keep
+q,ɥ,u,LATIN SMALL LETTER TURNED H,queveohoy,ɥueveohoy,manual_user_2026_06_26,keep
+s,ᴣ,3,LATIN LETTER SMALL CAPITAL EZH,passionatepennypincher,paᴣsionatepennypincher,manual_user_2026_06_26,keep
+u,џ,1,CYRILLIC SMALL LETTER DZHE,tounsi-blid,toџnsi-blid,manual_user_2026_06_26,keep
+u,ߎ,1,NKO LETTER U,bradescosaude,bradescosaߎde,manual_user_2026_06_26,keep

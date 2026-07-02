@@ -1,0 +1,437 @@
+{
+  "nearest_d1": {
+    "counts": {
+      "negative": 3571,
+      "positive": 6428,
+      "rows": 9999
+    },
+    "legit": {
+      "mean": 3.8569186656678895,
+      "median": 4.241186141967773,
+      "min": -2.7441599369049072,
+      "q25": 3.5271734595298767,
+      "rows": 6428,
+      "std": 1.134815437641633
+    },
+    "ocr_rf": {
+      "auc_predictability": 0.9690635196535846,
+      "balanced_accuracy_at_0_5": 0.904156374836093,
+      "feature_importances": [
+        {
+          "importance": 0.35666249334067374,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.3285172402224458,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.31482026643688055,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.9690635196535846,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    },
+    "raw_rf": {
+      "auc_predictability": 0.9479614551886073,
+      "balanced_accuracy_at_0_5": 0.8763172454051605,
+      "feature_importances": [
+        {
+          "importance": 0.3518146661033883,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.3317883581067633,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.31639697578984843,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.9479614551886073,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    }
+  },
+  "nearest_d2": {
+    "counts": {
+      "negative": 3571,
+      "positive": 6428,
+      "rows": 9999
+    },
+    "legit": {
+      "mean": 3.36778717645251,
+      "median": 3.7852054834365845,
+      "min": -3.0974767208099365,
+      "q25": 2.7477604150772095,
+      "rows": 6428,
+      "std": 1.3823271633957166
+    },
+    "ocr_rf": {
+      "auc_predictability": 0.8901006747955792,
+      "balanced_accuracy_at_0_5": 0.8014994489242042,
+      "feature_importances": [
+        {
+          "importance": 0.3559642925293367,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.32954000322052496,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.31449570425013823,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.8901006747955792,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    },
+    "raw_rf": {
+      "auc_predictability": 0.8237276247979752,
+      "balanced_accuracy_at_0_5": 0.7285287365334936,
+      "feature_importances": [
+        {
+          "importance": 0.34864853486716796,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.3314144528225452,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.31993701231028676,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.8237276247979752,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    }
+  },
+  "nearest_mix65": {
+    "counts": {
+      "negative": 3571,
+      "positive": 6428,
+      "rows": 9999
+    },
+    "legit": {
+      "mean": 3.5424721944788424,
+      "median": 3.974545955657959,
+      "min": -2.969467878341675,
+      "q25": 2.970085859298706,
+      "rows": 6428,
+      "std": 1.3126602664281797
+    },
+    "ocr_rf": {
+      "auc_predictability": 0.9189787890272749,
+      "balanced_accuracy_at_0_5": 0.8347818131918396,
+      "feature_importances": [
+        {
+          "importance": 0.3560294652946345,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.33090233327656293,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.31306820142880265,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.9189787890272749,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    },
+    "raw_rf": {
+      "auc_predictability": 0.8620546196705743,
+      "balanced_accuracy_at_0_5": 0.7639979786626937,
+      "feature_importances": [
+        {
+          "importance": 0.34715383817775297,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.3336166306592994,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.31922953116294767,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.8620546196705743,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    }
+  },
+  "old_backtrack_incomplete": {
+    "counts": {
+      "negative": 3571,
+      "positive": 5830,
+      "rows": 9401
+    },
+    "legit": {
+      "mean": 3.172371790233894,
+      "median": 3.5417414903640747,
+      "min": -2.8871450424194336,
+      "q25": 2.4140974283218384,
+      "rows": 5830,
+      "std": 1.3981271721027422
+    },
+    "ocr_rf": {
+      "auc_predictability": 0.8378803576225011,
+      "balanced_accuracy_at_0_5": 0.7658258508883005,
+      "feature_importances": [
+        {
+          "importance": 0.6061930416928559,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.21747283015072144,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.17633412815642277,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.8378803576225011,
+      "split": {
+        "holdout_rows": 941,
+        "seed": 42,
+        "train_rows": 8460
+      }
+    },
+    "raw_rf": {
+      "auc_predictability": 0.8404296650166916,
+      "balanced_accuracy_at_0_5": 0.7683943440389855,
+      "feature_importances": [
+        {
+          "importance": 0.5943673032492108,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.22140032304028484,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.18423237371050427,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.8404296650166916,
+      "split": {
+        "holdout_rows": 941,
+        "seed": 42,
+        "train_rows": 8460
+      }
+    }
+  },
+  "original": {
+    "counts": {
+      "negative": 3571,
+      "positive": 6428,
+      "rows": 9999
+    },
+    "legit": {
+      "mean": 2.2946306557881235,
+      "median": 2.562984824180603,
+      "min": -3.179194450378418,
+      "q25": 1.3023037314414978,
+      "rows": 6428,
+      "std": 1.6476663846847757
+    },
+    "ocr_rf": {
+      "auc_predictability": 0.9874385212872085,
+      "balanced_accuracy_at_0_5": 0.9606427329874407,
+      "feature_importances": [
+        {
+          "importance": 0.37472435474214727,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.3315042560814908,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.29377138917636203,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.9874385212872085,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    },
+    "raw_rf": {
+      "auc_predictability": 0.9684100700933561,
+      "balanced_accuracy_at_0_5": 0.9080618250410584,
+      "feature_importances": [
+        {
+          "importance": 0.37047367884238236,
+          "member": "damerau_levenshtein"
+        },
+        {
+          "importance": 0.3346432270280445,
+          "member": "levenshtein"
+        },
+        {
+          "importance": 0.2948830941295732,
+          "member": "token_set_ratio"
+        }
+      ],
+      "members": [
+        "levenshtein",
+        "damerau_levenshtein",
+        "token_set_ratio"
+      ],
+      "model": {
+        "class_weight": "balanced_subsample",
+        "n_estimators": 400,
+        "seed": 42,
+        "train_fraction": 0.9,
+        "type": "random_forest"
+      },
+      "roc_auc": 0.9684100700933561,
+      "split": {
+        "holdout_rows": 1000,
+        "seed": 42,
+        "train_rows": 8999
+      }
+    }
+  }
+}

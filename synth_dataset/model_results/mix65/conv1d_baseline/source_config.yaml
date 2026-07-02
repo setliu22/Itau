@@ -1,0 +1,31 @@
+run_name: null          # defaults to a UTC timestamp at launch time
+
+data:
+  train_pkl: data/splits/train.pkl
+  val_pkl:   data/splits/val.pkl
+  test_pkl:  data/splits/test.pkl
+
+rendering:
+  height: 32
+  background: black     # 'white' → blank=1.0 ink=0.0 | 'black' → blank=0.0 ink=1.0
+
+slicing:
+  slice_width: 6
+  stride: 6             # set equal to slice_width for non-overlapping strips
+  remove_padding: false
+  pad_to_width: null    # if set, pad/truncate image to this width before slicing
+
+model:
+  encoder_type: conv1d  # 'conv1d' | 'bilstm' | 'transformer'
+  embed_dim: 128
+  pooling: mean         # 'mean' | 'max' | 'attention'
+
+training:
+  num_epochs: 20
+  batch_size: 64
+  lr: 1.0e-3
+  num_workers: 4        # set > 0 on Linux/Mac; keep 0 on Windows
+  seed: 7 # is best 
+
+# 0.9074, 0.9423 seed 0
+# 0.9148, 0.9528 seed 7

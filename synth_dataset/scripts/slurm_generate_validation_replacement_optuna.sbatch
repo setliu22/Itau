@@ -11,7 +11,7 @@
 set -euo pipefail
 
 cd /home/setliu22/Itau/synth_dataset
-mkdir -p logs NEW_DATASETS_DO_NOT_EVER_DELETE generate_validation/runs .cache/matplotlib .cache/huggingface
+mkdir -p logs generated_datasets/mix65 generate_validation/runs .cache/matplotlib .cache/huggingface
 
 PYTHON=/home/setliu22/.conda/envs/itau/bin/python
 CONDA_PREFIX=/home/setliu22/.conda/envs/itau
@@ -28,14 +28,14 @@ export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_HOME/hub}"
 
 RUN_DIR=generate_validation/runs/validation_replacement_optuna
 rm -rf "$RUN_DIR"
-rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/BETTER_VALIDATION.parquet
-rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/GENERATED_VALIDATION_POSITIVES.parquet
-rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/UNCHANGED_VALIDATION_NEGATIVES.parquet
-rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/VALIDATION_POSITIVE_GENERATION_AUDIT.parquet
-rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/validation_generation_metrics.json
-rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/selected_validation_config.json
-rm -f NEW_DATASETS_DO_NOT_EVER_DELETE/FINALVALIDATIONCOMPARISON.txt
-rm -rf NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison
+rm -f generated_datasets/mix65/validation.parquet
+rm -f generated_datasets/mix65/generated_validation_positives.parquet
+rm -f generated_datasets/mix65/unchanged_validation_negatives.parquet
+rm -f generated_datasets/mix65/validation_positive_generation_audit.parquet
+rm -f generated_datasets/mix65/validation_generation_metrics.json
+rm -f generated_datasets/mix65/selected_validation_config.json
+rm -f generated_datasets/mix65/final_validation_comparison.txt
+rm -rf generated_datasets/mix65/final_validation_comparison
 
 "$PYTHON" -m py_compile \
   generate_validation/build_scored_lookups.py \
@@ -47,14 +47,14 @@ rm -rf NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison
 "$PYTHON" generate_validation/build_scored_lookups.py \
   --input-dir BASE_DATASETS_DO_NOT_EVER_DELETE \
   --split validation \
-  --output-dir LOOKUP_TABLE_IN_USE \
+  --output-dir lookup_tables/in_use \
   --device cuda \
   --legit-batch-size 256
 
 "$PYTHON" generate_validation/optimize_validation_replacements.py \
   --input-dir BASE_DATASETS_DO_NOT_EVER_DELETE \
-  --output-dir NEW_DATASETS_DO_NOT_EVER_DELETE \
-  --lookup-dir LOOKUP_TABLE_IN_USE \
+  --output-dir generated_datasets/mix65 \
+  --lookup-dir lookup_tables/in_use \
   --run-dir "$RUN_DIR" \
   --study-name validation_replacement_optuna \
   --storage sqlite:///"$RUN_DIR"/study.db \
@@ -67,11 +67,11 @@ rm -rf NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison
   --ocr-batch-size 256
 
 "$PYTHON" generate_validation/final_comparison.py \
-  --generated-validation NEW_DATASETS_DO_NOT_EVER_DELETE/BETTER_VALIDATION.parquet \
+  --generated-validation generated_datasets/mix65/validation.parquet \
   --original-validation BASE_DATASETS_DO_NOT_EVER_DELETE/validate \
-  --audit NEW_DATASETS_DO_NOT_EVER_DELETE/VALIDATION_POSITIVE_GENERATION_AUDIT.parquet \
-  --output-dir NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison \
-  --output-text NEW_DATASETS_DO_NOT_EVER_DELETE/FINALVALIDATIONCOMPARISON.txt \
+  --audit generated_datasets/mix65/validation_positive_generation_audit.parquet \
+  --output-dir generated_datasets/mix65/final_validation_comparison \
+  --output-text generated_datasets/mix65/final_validation_comparison.txt \
   --device cuda \
   --legit-batch-size 256 \
   --ocr-batch-size 256

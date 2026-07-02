@@ -1,0 +1,16 @@
+Paper example LEGIT scores
+
+france-abonnements
+  previous:    frafce-a_bonnemmnts  LEGIT=2.649123
+  regenerated: frǝnce-ǝbonnements  LEGIT=3.667398
+  delta:       +1.018275
+
+eadaily
+  previous:    ëaďaiły  LEGIT=0.049582
+  regenerated: eǝdaıly  LEGIT=2.836217
+  delta:       +2.786635
+
+gamefaqs
+  previous:    g4mefeqs  LEGIT=0.856237
+  regenerated: gǝmefaqs  LEGIT=4.654412
+  delta:       +3.798175

@@ -49,11 +49,11 @@ class Edit:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path, default=Path("BASE_DATASETS_DO_NOT_EVER_DELETE"))
-    parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE"))
-    parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
-    parser.add_argument("--old-exact-lookup", type=Path, default=Path("DONOTDELETE/dejavu_sans_exact_lookalike_lookup.parquet"))
-    parser.add_argument("--unique-real-names", type=Path, default=Path("DONOTDELETE/unique_real_names_no_single_char_hyphen_prefix.parquet"))
-    parser.add_argument("--nearest-neighbor-table", type=Path, default=Path("LOOKUP_TABLE_IN_USE/validation_nearest_real_name_neighbors.parquet"))
+    parser.add_argument("--output-dir", type=Path, default=Path("generated_datasets/mix65"))
+    parser.add_argument("--lookup-dir", type=Path, default=Path("lookup_tables/in_use"))
+    parser.add_argument("--old-exact-lookup", type=Path, default=Path("lookup_tables/archive/dejavu_sans_exact_lookalike_lookup.csv"))
+    parser.add_argument("--unique-real-names", type=Path, default=Path("inputs/unique_real_names_no_single_char_hyphen_prefix.parquet"))
+    parser.add_argument("--nearest-neighbor-table", type=Path, default=Path("lookup_tables/in_use/validation_nearest_real_name_neighbors.parquet"))
     parser.add_argument("--split", default="validation")
     parser.add_argument("--seed", type=int, default=SEEDS["spoof_generation"])
     parser.add_argument("--rf-seed", type=int, default=SEEDS["rf_split"])
@@ -101,7 +101,7 @@ def is_compatibility_character(char: str) -> bool:
 
 
 def load_strict_exact_edits(path: Path, *, min_similarity: float) -> dict[str, list[dict[str, Any]]]:
-    frame = pd.read_parquet(path)
+    frame = pd.read_csv(path) if path.suffix.casefold() == ".csv" else pd.read_parquet(path)
     frame = frame.loc[
         frame["glyph_similarity"].astype(float).ge(float(min_similarity))
         & frame["area_ratio"].astype(float).between(0.995, 1.005)
@@ -726,24 +726,24 @@ def main() -> int:
         seed=int(args.rf_seed),
         ocr_normalizer=normalizer,
     )
-    positive_path = args.output_dir / "GENERATED_VALIDATION_POSITIVES.parquet"
-    negative_path = args.output_dir / "GENERATED_VALIDATION_NEGATIVES.parquet"
-    validation_path = args.output_dir / "BETTER_VALIDATION.parquet"
-    audit_path = args.output_dir / "VALIDATION_POSITIVE_GENERATION_AUDIT.parquet"
-    negative_audit_path = args.output_dir / "VALIDATION_NEGATIVE_GENERATION_AUDIT.parquet"
+    positive_path = args.output_dir / "generated_validation_positives.parquet"
+    negative_path = args.output_dir / "generated_validation_negatives.parquet"
+    validation_path = args.output_dir / "validation.parquet"
+    audit_path = args.output_dir / "validation_positive_generation_audit.parquet"
+    negative_audit_path = args.output_dir / "validation_negative_generation_audit.parquet"
     metrics_path = args.output_dir / "validation_generation_metrics.json"
-    report_path = args.output_dir / "FINAL_VISUAL_HARDNEG_REPORT.txt"
-    examples_path = args.output_dir / "FINAL_VISUAL_HARDNEG_EXAMPLES.csv"
+    report_path = args.output_dir / "validation_generation_report.txt"
+    examples_path = args.output_dir / "validation_example_pairs.csv"
 
     dataset.to_parquet(validation_path, index=False)
     positive_frame.to_parquet(positive_path, index=False)
     negative_frame.to_parquet(negative_path, index=False)
     positive_audit.to_parquet(audit_path, index=False)
     negative_audit.to_parquet(negative_audit_path, index=False)
-    ocr_frame.to_parquet(args.output_dir / "VALIDATION_TABLE_OCR_NORMALIZED.parquet", index=False)
+    ocr_frame.to_parquet(args.output_dir / "validation_table_ocr_normalized.parquet", index=False)
     examples = representative_examples(positive_frame, positive_audit, seed=SEEDS["representative_examples"])
     examples.to_csv(examples_path, index=False)
-    examples.to_parquet(args.output_dir / "FINAL_VISUAL_HARDNEG_EXAMPLES.parquet", index=False)
+    examples.to_parquet(args.output_dir / "validation_example_pairs.parquet", index=False)
 
     metrics = {
         "strategy": "strict_visual_positive_generation_plus_hard_random_name_negatives",

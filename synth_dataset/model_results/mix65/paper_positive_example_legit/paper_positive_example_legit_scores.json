@@ -1,0 +1,26 @@
+[
+  {
+    "real_name": "france-abonnements",
+    "previous_fraudulent_name": "frafce-a_bonnemmnts",
+    "previous_legit": 2.649123191833496,
+    "regenerated_fraudulent_name": "frǝnce-ǝbonnements",
+    "regenerated_legit": 3.66739821434021,
+    "regenerated_minus_previous_legit": 1.0182750225067139
+  },
+  {
+    "real_name": "eadaily",
+    "previous_fraudulent_name": "ëaďaiły",
+    "previous_legit": 0.049581676721572876,
+    "regenerated_fraudulent_name": "eǝdaıly",
+    "regenerated_legit": 2.836216688156128,
+    "regenerated_minus_previous_legit": 2.786635011434555
+  },
+  {
+    "real_name": "gamefaqs",
+    "previous_fraudulent_name": "g4mefeqs",
+    "previous_legit": 0.8562372326850891,
+    "regenerated_fraudulent_name": "gǝmefaqs",
+    "regenerated_legit": 4.654411792755127,
+    "regenerated_minus_previous_legit": 3.798174560070038
+  }
+]

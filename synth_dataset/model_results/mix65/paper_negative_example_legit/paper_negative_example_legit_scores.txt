@@ -1,0 +1,16 @@
+Paper hard-negative example LEGIT scores
+
+leadlovers
+  previous:    spirituàl-ŗesearchfoundation  LEGIT=0.852893
+  regenerated: steaklovers  LEGIT=4.612299
+  delta:       +3.759405
+
+php-fig
+  previous:    lhotellarie-restauraationn  LEGIT=0.667680
+  regenerated: hi-fi  LEGIT=1.151895
+  delta:       +0.484214
+
+dpam
+  previous:    2chkovvaihànashi-matomē  LEGIT=0.523682
+  regenerated: epam  LEGIT=-0.272934
+  delta:       -0.796617

@@ -47,8 +47,8 @@ from pipeline_common import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path, default=Path("BASE_DATASETS_DO_NOT_EVER_DELETE"))
-    parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE"))
-    parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
+    parser.add_argument("--output-dir", type=Path, default=Path("generated_datasets/mix65"))
+    parser.add_argument("--lookup-dir", type=Path, default=Path("lookup_tables/in_use"))
     parser.add_argument("--run-dir", type=Path, default=Path("generate_validation/runs/validation_replacement_optuna"))
     parser.add_argument("--cache-dir", type=Path, default=Path(".cache/validation_generation"))
     parser.add_argument("--study-name", default="validation_replacement_optuna")
@@ -90,7 +90,7 @@ def suggest_params(trial: Any) -> dict[str, Any]:
         trial,
         max_name="max_adjacent_swaps",
         probability_name="adjacent_apply_probability",
-        max_high=2,
+        max_high=1,
     )
     max_forward, forward_prob = suggest_conditional_count_probability(
         trial,
@@ -102,18 +102,18 @@ def suggest_params(trial: Any) -> dict[str, Any]:
         trial,
         max_name="max_ocr_substitutions",
         probability_name="ocr_apply_probability",
-        max_high=6,
+        max_high=2,
     )
     max_exact, exact_prob = suggest_conditional_count_probability(
         trial,
         max_name="max_exact_lookalikes",
         probability_name="exact_apply_probability",
-        max_high=6,
+        max_high=2,
     )
-    adjacent_temperature = trial.suggest_categorical("adjacent_selection_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_adjacent > 0 else 0.0
-    forward_temperature = trial.suggest_categorical("multichar_forward_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_forward > 0 else 0.0
-    ocr_temperature = trial.suggest_categorical("ocr_selection_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_ocr > 0 else 0.0
-    exact_temperature = trial.suggest_categorical("exact_selection_temperature", [0.0, 0.1, 0.25, 0.5, 1.0, 2.0]) if max_exact > 0 else 0.0
+    adjacent_temperature = trial.suggest_categorical("adjacent_selection_temperature", [0.0, 0.1, 0.25, 0.5]) if max_adjacent > 0 else 0.0
+    forward_temperature = trial.suggest_categorical("multichar_forward_temperature", [0.0, 0.1, 0.25, 0.5]) if max_forward > 0 else 0.0
+    ocr_temperature = trial.suggest_categorical("ocr_selection_temperature", [0.0, 0.1, 0.25, 0.5]) if max_ocr > 0 else 0.0
+    exact_temperature = trial.suggest_categorical("exact_selection_temperature", [0.0, 0.1, 0.25, 0.5]) if max_exact > 0 else 0.0
     if max_ocr > 0 and max_exact > 0:
         ocr_share = trial.suggest_float("ocr_share", 0.0, 1.0)
     elif max_ocr > 0:
@@ -121,16 +121,16 @@ def suggest_params(trial: Any) -> dict[str, Any]:
     else:
         ocr_share = 0.0
 
-    short_min = trial.suggest_int("short_min_replacements", 0, 1)
-    short_max = max(short_min, trial.suggest_int("short_max_replacements", 1, 3))
-    min_replacements = trial.suggest_int("minimum_replacement_count", 0, 2)
-    max_cap = max(min_replacements, trial.suggest_int("maximum_replacement_cap", 2, 6))
-    medium_pct_min = trial.suggest_float("medium_pct_min", 0.05, 0.35)
-    medium_pct_max = min(0.70, medium_pct_min + trial.suggest_float("medium_pct_width", 0.05, 0.35))
-    long_pct_min = trial.suggest_float("long_pct_min", 0.05, 0.35)
-    long_pct_max = min(0.75, long_pct_min + trial.suggest_float("long_pct_width", 0.05, 0.40))
-    short_max_len = trial.suggest_int("short_max_len", 5, 8)
-    medium_max_len = short_max_len + trial.suggest_int("medium_length_extra", 4, 10)
+    short_min = trial.suggest_int("short_min_replacements", 0, 0)
+    short_max = max(short_min, trial.suggest_int("short_max_replacements", 1, 2))
+    min_replacements = trial.suggest_int("minimum_replacement_count", 0, 1)
+    max_cap = max(min_replacements, trial.suggest_int("maximum_replacement_cap", 1, 3))
+    medium_pct_min = trial.suggest_float("medium_pct_min", 0.03, 0.14)
+    medium_pct_max = min(0.25, medium_pct_min + trial.suggest_float("medium_pct_width", 0.03, 0.12))
+    long_pct_min = trial.suggest_float("long_pct_min", 0.03, 0.12)
+    long_pct_max = min(0.18, long_pct_min + trial.suggest_float("long_pct_width", 0.03, 0.10))
+    short_max_len = trial.suggest_int("short_max_len", 5, 6)
+    medium_max_len = short_max_len + trial.suggest_int("medium_length_extra", 3, 6)
 
     return {
         "max_adjacent_swaps": max_adjacent,
@@ -167,45 +167,45 @@ def enqueue_anchor_trials(study: Any) -> None:
     anchors = [
         {
             "max_adjacent_swaps": 1,
-            "adjacent_apply_probability": 0.5,
+            "adjacent_apply_probability": 0.35,
             "max_multichar_forward": 0,
-            "max_ocr_substitutions": 2,
-            "ocr_apply_probability": 0.7,
-            "max_exact_lookalikes": 2,
-            "exact_apply_probability": 0.8,
-            "ocr_share": 0.45,
+            "max_ocr_substitutions": 1,
+            "ocr_apply_probability": 0.45,
+            "max_exact_lookalikes": 1,
+            "exact_apply_probability": 0.55,
+            "ocr_share": 0.25,
             "short_min_replacements": 0,
             "short_max_replacements": 1,
-            "minimum_replacement_count": 1,
-            "maximum_replacement_cap": 3,
-            "medium_pct_min": 0.15,
-            "medium_pct_width": 0.15,
-            "long_pct_min": 0.12,
-            "long_pct_width": 0.18,
-            "short_max_len": 6,
-            "medium_length_extra": 6,
-            "replacement_count_skew": "high",
+            "minimum_replacement_count": 0,
+            "maximum_replacement_cap": 2,
+            "medium_pct_min": 0.05,
+            "medium_pct_width": 0.06,
+            "long_pct_min": 0.04,
+            "long_pct_width": 0.05,
+            "short_max_len": 5,
+            "medium_length_extra": 4,
+            "replacement_count_skew": "low",
         },
         {
             "max_adjacent_swaps": 0,
             "max_multichar_forward": 1,
-            "multichar_forward_apply_probability": 0.4,
+            "multichar_forward_apply_probability": 0.25,
             "max_ocr_substitutions": 1,
-            "ocr_apply_probability": 0.9,
-            "max_exact_lookalikes": 3,
-            "exact_apply_probability": 0.9,
-            "ocr_share": 0.25,
+            "ocr_apply_probability": 0.35,
+            "max_exact_lookalikes": 1,
+            "exact_apply_probability": 0.45,
+            "ocr_share": 0.20,
             "short_min_replacements": 0,
             "short_max_replacements": 1,
-            "minimum_replacement_count": 1,
-            "maximum_replacement_cap": 4,
-            "medium_pct_min": 0.10,
-            "medium_pct_width": 0.20,
-            "long_pct_min": 0.10,
-            "long_pct_width": 0.25,
-            "short_max_len": 7,
-            "medium_length_extra": 7,
-            "replacement_count_skew": "middle",
+            "minimum_replacement_count": 0,
+            "maximum_replacement_cap": 2,
+            "medium_pct_min": 0.04,
+            "medium_pct_width": 0.05,
+            "long_pct_min": 0.03,
+            "long_pct_width": 0.05,
+            "short_max_len": 5,
+            "medium_length_extra": 4,
+            "replacement_count_skew": "low",
         },
     ]
     seen = {tuple(sorted(trial.params.items())) for trial in study.trials}
@@ -560,10 +560,10 @@ def main() -> int:
     positives = final_payload["positive_frame"]
     negatives = final_dataset.loc[final_dataset["label"].eq(0.0)].reset_index(drop=True)
 
-    final_dataset.to_parquet(args.output_dir / "BETTER_VALIDATION.parquet", index=False)
-    positives.to_parquet(args.output_dir / "GENERATED_VALIDATION_POSITIVES.parquet", index=False)
-    negatives.to_parquet(args.output_dir / "UNCHANGED_VALIDATION_NEGATIVES.parquet", index=False)
-    final_audit.to_parquet(args.output_dir / "VALIDATION_POSITIVE_GENERATION_AUDIT.parquet", index=False)
+    final_dataset.to_parquet(args.output_dir / "validation.parquet", index=False)
+    positives.to_parquet(args.output_dir / "generated_validation_positives.parquet", index=False)
+    negatives.to_parquet(args.output_dir / "unchanged_validation_negatives.parquet", index=False)
+    final_audit.to_parquet(args.output_dir / "validation_positive_generation_audit.parquet", index=False)
     save_registry(context["registry_path"], args.split, final_audit)
 
     final_metrics = {
@@ -575,10 +575,10 @@ def main() -> int:
         "raw_rf": final_payload["raw_rf"],
         "ocr_rf": final_payload["ocr_rf"],
         "outputs": {
-            "validation": str(args.output_dir / "BETTER_VALIDATION.parquet"),
-            "positives": str(args.output_dir / "GENERATED_VALIDATION_POSITIVES.parquet"),
-            "negatives": str(args.output_dir / "UNCHANGED_VALIDATION_NEGATIVES.parquet"),
-            "audit": str(args.output_dir / "VALIDATION_POSITIVE_GENERATION_AUDIT.parquet"),
+            "validation": str(args.output_dir / "validation.parquet"),
+            "positives": str(args.output_dir / "generated_validation_positives.parquet"),
+            "negatives": str(args.output_dir / "unchanged_validation_negatives.parquet"),
+            "audit": str(args.output_dir / "validation_positive_generation_audit.parquet"),
             "registry": str(context["registry_path"]),
         },
     }

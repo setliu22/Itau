@@ -1,0 +1,27 @@
+{
+  "included_q25_rule_counts": {
+    "exact_q25_lookup": 24,
+    "multichar_forward_q25_lookup": 3,
+    "ocr_q25_lookup": 21
+  },
+  "legit_argument_order": "score_pairs([(generated_or_corrupted, original)], batch_size=...)",
+  "lookup_version": "validation_scored_lookups_v2_2026_06_29",
+  "max_examples_per_rule": 512,
+  "minimum_q25_examples": 20,
+  "outputs": {
+    "adjacent_swap_scored_lookup": "lookup_tables/in_use/adjacent_swap_scored_lookup.parquet",
+    "exact_q25_lookup": "lookup_tables/in_use/exact_q25_lookup.parquet",
+    "multichar_forward_q25_lookup": "lookup_tables/in_use/multichar_forward_q25_lookup.parquet",
+    "ocr_q25_lookup": "lookup_tables/in_use/ocr_q25_lookup.parquet"
+  },
+  "positive_real_names_scored_for_adjacent": 3143,
+  "q25_reference_corpus_hash": "52d27c219d030402949df72dee8c8e4f3cd56eb3f801b99d2d9cdf93f7807de3",
+  "q25_reference_corpus_size": 30000,
+  "rule_counts": {
+    "adjacent_swap_scored_lookup": 15880,
+    "exact_q25_lookup": 24,
+    "multichar_forward_q25_lookup": 3,
+    "ocr_q25_lookup": 21
+  },
+  "split": "validation"
+}
