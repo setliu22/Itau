@@ -72,7 +72,6 @@ def draw_panel(ax: plt.Axes, threshold_metrics: dict, title: str) -> None:
         for col in range(2):
             value = int(matrix[row, col])
             color = "white" if value > vmax * 0.45 else "black"
-            weight = "bold" if value > vmax * 0.45 else "normal"
             ax.text(
                 col,
                 row,
@@ -80,7 +79,6 @@ def draw_panel(ax: plt.Axes, threshold_metrics: dict, title: str) -> None:
                 ha="center",
                 va="center",
                 color=color,
-                fontweight=weight,
                 fontsize=11,
             )
 
