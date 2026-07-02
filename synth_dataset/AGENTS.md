@@ -66,6 +66,21 @@ Do not submit Slurm jobs from Codex unless the user explicitly asks in that
 same turn. By default, prepare and syntax-check the wrapper, then give the user
 the exact `sbatch` command to run manually.
 
+For long model-training jobs, never allow a preempted/requeued job to silently
+restart from epoch 1 and overwrite useful checkpoints. Slurm wrappers should
+use `--no-requeue` where appropriate, and training scripts must refuse a fresh
+start when `latest.pt`, `best.pt`, or `log.csv` already exists unless an explicit
+resume flag is provided. Resume jobs should load `latest.pt` and append to the
+existing log rather than truncating it.
+
+If a model-training job is already running and a reset/requeue risk is detected,
+first try to disable requeue for the active job with `scontrol update
+JobId=<id> Requeue=0`. If the scheduler cannot be reached, do not delete or move
+the model directory. Make sure the training script on disk has the fresh-start
+guard above so any restarted process exits before overwriting checkpoints. When
+resubmitting after a preemption, use the explicit resume path, for example
+`--export=ALL,MODEL_KEY=<model>,RESUME=1`.
+
 Build the D1 validation parquet from the 10k validation source with:
 
 ```bash

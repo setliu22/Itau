@@ -1,0 +1,28 @@
+run_name: conv1d_stacked_cross_attention
+data:
+  train_pkl: model_results/mix65/pkl_splits/train.pkl
+  val_pkl: model_results/mix65/pkl_splits/validation.pkl
+  test_pkl: model_results/mix65/pkl_splits/test.pkl
+rendering:
+  height: 32
+  background: black
+slicing:
+  slice_width: 6
+  stride: 6
+  remove_padding: false
+  pad_to_width: null
+model:
+  encoder_type: transformer
+  embed_dim: 128
+  pooling: attention
+  pair_head: stacked_cross_attention
+  cross_attention_layers: 4
+  cross_attention_heads: 4
+  cross_attention_feedforward: 256
+  dropout: 0.0
+training:
+  num_epochs: 20
+  batch_size: 64
+  lr: 0.001
+  num_workers: 4
+  seed: 7

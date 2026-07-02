@@ -1,0 +1,140 @@
+{
+  "artifacts": {
+    "best_checkpoint": "model_results/mix65/conv1d_stacked_cross_attention/best.pt",
+    "config": "model_results/mix65/conv1d_stacked_cross_attention/config.yaml",
+    "latest_checkpoint": "model_results/mix65/conv1d_stacked_cross_attention/latest.pt",
+    "log": "model_results/mix65/conv1d_stacked_cross_attention/log.csv",
+    "training_curves": "model_results/mix65/conv1d_stacked_cross_attention/training_curves.png"
+  },
+  "best_epoch": 18,
+  "best_val_auc": 0.9999866256508341,
+  "config": {
+    "data": {
+      "test_pkl": "model_results/mix65/pkl_splits/test.pkl",
+      "train_pkl": "model_results/mix65/pkl_splits/train.pkl",
+      "val_pkl": "model_results/mix65/pkl_splits/validation.pkl"
+    },
+    "model": {
+      "cross_attention_feedforward": 256,
+      "cross_attention_heads": 4,
+      "cross_attention_layers": 4,
+      "dropout": 0.0,
+      "embed_dim": 128,
+      "encoder_type": "transformer",
+      "pair_head": "stacked_cross_attention",
+      "pooling": "attention"
+    },
+    "rendering": {
+      "background": "black",
+      "height": 32
+    },
+    "run_name": "conv1d_stacked_cross_attention",
+    "slicing": {
+      "pad_to_width": null,
+      "remove_padding": false,
+      "slice_width": 6,
+      "stride": 6
+    },
+    "training": {
+      "batch_size": 64,
+      "lr": 0.001,
+      "num_epochs": 20,
+      "num_workers": 4,
+      "seed": 7
+    }
+  },
+  "elapsed_seconds": 7496.09334731102,
+  "run_name": "conv1d_stacked_cross_attention",
+  "split_metrics": {
+    "test": {
+      "avg_precision": 0.9999796717020224,
+      "best_threshold": {
+        "accuracy": 0.9984818168370405,
+        "f1": 0.9988196054455536,
+        "fn": 137,
+        "fp": 253,
+        "mcc": 0.9966932874278543,
+        "precision": 0.9984690512353486,
+        "recall": 0.999170405895568,
+        "specificity": 0.9972423565316911,
+        "threshold": 0.27247464656829834,
+        "tn": 91492,
+        "tp": 165004
+      },
+      "fixed_threshold": {
+        "accuracy": 0.9983922829581994,
+        "f1": 0.998749337572867,
+        "fn": 235,
+        "fp": 178,
+        "mcc": 0.9964993491943689,
+        "precision": 0.998921761042863,
+        "recall": 0.9985769736164853,
+        "specificity": 0.9980598397732846,
+        "threshold": 0.5,
+        "tn": 91567,
+        "tp": 164906
+      },
+      "roc_auc": 0.9999643761170802
+    },
+    "train": {
+      "avg_precision": 0.9999877630540945,
+      "best_threshold": {
+        "accuracy": 0.9990226631507128,
+        "f1": 0.9992400828421221,
+        "fn": 284,
+        "fp": 670,
+        "mcc": 0.9978714239077657,
+        "precision": 0.9989329392109803,
+        "recall": 0.9995474154073182,
+        "specificity": 0.9980781090888229,
+        "threshold": 0.3352517783641815,
+        "tn": 347945,
+        "tp": 627223
+      },
+      "fixed_threshold": {
+        "accuracy": 0.9989529997274931,
+        "f1": 0.9991856703478829,
+        "fn": 508,
+        "fp": 514,
+        "mcc": 0.9977198574418331,
+        "precision": 0.9991808934635618,
+        "recall": 0.999190447277879,
+        "specificity": 0.9985255941367984,
+        "threshold": 0.5,
+        "tn": 348101,
+        "tp": 626999
+      },
+      "roc_auc": 0.9999796432687351
+    },
+    "validation": {
+      "avg_precision": 0.9999925485365289,
+      "best_threshold": {
+        "accuracy": 0.998999899989999,
+        "f1": 0.9992226368159204,
+        "fn": 1,
+        "fp": 9,
+        "mcc": 0.9978224163848877,
+        "precision": 0.9986016159105034,
+        "recall": 0.9998444306160548,
+        "specificity": 0.9974796975637077,
+        "threshold": 0.6144900918006897,
+        "tn": 3562,
+        "tp": 6427
+      },
+      "fixed_threshold": {
+        "accuracy": 0.998999899989999,
+        "f1": 0.9992226368159204,
+        "fn": 1,
+        "fp": 9,
+        "mcc": 0.9978224163848877,
+        "precision": 0.9986016159105034,
+        "recall": 0.9998444306160548,
+        "specificity": 0.9974796975637077,
+        "threshold": 0.5,
+        "tn": 3562,
+        "tp": 6427
+      },
+      "roc_auc": 0.9999866256508341
+    }
+  }
+}
