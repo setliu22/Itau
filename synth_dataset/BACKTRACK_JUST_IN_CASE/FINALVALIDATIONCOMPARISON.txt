@@ -1,0 +1,85 @@
+FINAL VALIDATION COMPARISON
+
+Generated validation: NEW_DATASETS_DO_NOT_EVER_DELETE/BETTER_VALIDATION.parquet
+Original validation: BASE_DATASETS_DO_NOT_EVER_DELETE/validate
+Generated counts: {'0.0': 3571, '1.0': 5830}
+Original counts: {'0.0': 3571, '1.0': 6428}
+Row delta (generated - original): -598
+Dropped positive rows vs original: 598
+
+Positive-only LEGIT
+Generated mean: 3.1723717902
+Generated Q25: 2.4140974283
+Original mean: 2.2946306558
+Original Q25: 1.3023037314
+
+Random Forest ROC AUC, raw text metrics, 90:10 split
+Generated ROC AUC: 0.8404296650
+Generated balanced accuracy @ 0.5: 0.7683943440
+Generated AUC predictability: 0.8404296650
+Original ROC AUC: 0.9684100701
+Original balanced accuracy @ 0.5: 0.9080618250
+Original AUC predictability: 0.9684100701
+
+Random Forest ROC AUC, OCR-normalized text metrics, 90:10 split
+Generated ROC AUC: 0.8378803576
+Generated balanced accuracy @ 0.5: 0.7658258509
+Generated AUC predictability: 0.8378803576
+Original ROC AUC: 0.9874385213
+Original balanced accuracy @ 0.5: 0.9606427330
+Original AUC predictability: 0.9874385213
+
+Representative overlapping positive real-name examples
+real_name	original_fraudulent_name	previous_generated_fraudulent_name	new_generated_fraudulent_name	original_LEGIT	previous_generated_LEGIT	new_generated_LEGIT
+ar1web	ar1ewbf	əf1wab	əf1wab	3.945838	1.781945	1.781945
+articlecity	articlucity	artcilacty	artcilacty	3.885963	4.880736	4.880736
+backtrack-linux	backtrack-ľi-nux	bsckrәck-knivx	bsckrәck-knivx	3.118132	4.464724	4.464724
+bancacrfirenze	bancaċrfirênzě	bemaccrırnezs	bemaccrırnezs	2.338614	3.593486	3.593486
+basic-industries	basic-industrieś	bssec-nidvtfıse	baic-nidutsrıaa	4.092768	2.927812	4.439677
+bayan24	bay-an24	bәtsm24	bsyǝm24	1.667833	1.549390	0.249432
+boomle	ƀoomle	bakmla	bakmla	3.303088	3.784404	3.784404
+chineseinla	cħioeseiņla	chınssaima	chınssaima	1.746988	3.971043	3.971043
+combucom	čnmb-ucom	cobmucam	cobmucam	2.227630	3.745584	3.745584
+curse	cüȓșe	cvraa	cyraa	2.670235	3.182226	2.846876
+diesel	dîę-sel	diassk	diassk	1.804361	3.101508	3.101508
+encyclo	e_nc-yclo	amctcƚa	amctcƚa	1.212556	2.269120	2.269120
+gmial	g44ial	gkiaƚ	gkiaƚ	-1.202780	2.644885	2.644885
+gsm88	gsm88bh	tam88	tam88	-1.201928	0.294177	0.294177
+hpdrivers	hƥdriverqc	hprdkvaa	hprdkvaa	0.981475	0.679403	0.679403
+intuitcdn	intuidcdnfj	imvıtcdm	emtjtcdm	2.501281	2.842933	1.819125
+iskur	l-sk-ur	ıakur	lakur	1.936854	3.320515	2.209555
+jaxa	ĵaxã	jexǝ	jexǝ	2.927922	0.287276	0.287276
+jieshuwang	jierhuẅang	jisehvәmt	jıshvssmg	3.730498	3.250342	3.991495
+jikezhe	jykezzhe	jıkszhs	jıkszhs	2.725797	3.563494	3.563494
+jntufastupdates	jntuſaştûpdates	jmtyatsupdəeta	jmtyatsupdəeta	2.447874	3.834072	3.834072
+liagriffith	lıagriffìth	iıegrtfkth	iıegrtfkth	3.536719	0.994881	0.994881
+livesportsreviews	livessportsrevaews	kivasprotsrvısvvs	kivasprotsrvısvvs	3.783931	4.091511	4.091511
+lyricstranslate	lyricstranşlaten	lyrictraпslaet	lyrictraпslaet	4.659278	4.253215	4.253215
+megacritic	meĝaĉriŧic	ksәcrtiic	ksәcrtiic	3.460130	3.565055	3.565055
+mihanpezeshk	miĥânpezeshk	mihǝmpazahk	mihǝmpazahk	3.206215	4.149240	4.149240
+okglobalshopping	okglobalslhoppingc	kklgabsshappımg	akgkkblashapımg	4.020168	4.500506	4.445940
+onlinedailys	onlynddaailys	amlimsdalys	amlimsdalys	3.809905	4.804151	4.804151
+optumrx	oðťumřȑx	aptykrx	aptykrx	-1.911730	1.803875	1.803875
+pldthome	ppldtlkme	pldthaka	pkdthema	4.077922	4.223635	4.125264
+postoffice	þo-stoffĭce	patskffcs	patskffcs	0.327356	1.733160	1.733160
+provinz	proviinzy_	pfkvımz	pfkvımz	3.020241	1.535976	1.535976
+qooah	qnaħ	qkaah	qaaәh	-2.519963	4.059473	3.951085
+rechargeitnow	rečharģeitnow	rschragıtmaa	rschərgitmaa	3.100801	4.809163	4.812553
+safaribookings	safarribookingsv	satrakbaakıms	satrakbaakıms	4.785642	4.516044	4.516044
+santaclaraca	saota_claraca	samatclǝsca	samatclǝsca	2.945264	4.615622	4.615622
+se-ed	sĕ-ęď	aa-sd	ss-as	-1.879305	1.797290	2.809333
+sharkgames	sarkgamsea	shrakəmse	shrakəmse	2.657808	4.703035	4.703035
+shifting-gears	shiftingg-gearrs	shfitım-gasfs	shetımg-gsssr	4.628409	4.161138	3.601996
+shkolapk	sĥkolapķ	ahkaƚspk	ahkaƚspk	4.414465	4.633817	4.633817
+stupideasypaleo	stup_pideasypal-eo	stvpiedssypǝka	svpıdsesyplaak	3.363835	3.135138	4.134756
+suprnova	śuþrnovä	svprmavə	suprmeva	0.813651	3.292228	4.323437
+taknaz	taknãz	tskmәs	rəkmsz	3.505131	2.310660	1.939256
+terrysfabrics	teŗryfābrics	taryafәbrisc	taryafәbrisc	4.015007	4.543625	4.543625
+theluxurycloset	ťheluxuryclośet	tsluxuyrckasat	tsluxuyrckasat	2.177488	4.477892	4.477892
+tructiepbongda	trucʈiepbongda	trvtckspbmgdә	trvtckspbmgdә	4.326205	4.440720	4.440720
+tw66	tŵ66	tvv66	rvv66	2.387435	0.754885	-0.670749
+verisign	ṽeriicgn	varisıgm	varısigm	2.806784	4.226686	4.220674
+wotgenerals	wőtgenerals	watgensrlas	watgensrlas	0.897650	4.217163	4.217163
+xfinity	ẍƒińity	xfkmıry	xfkmıry	3.123747	3.320463	3.320463
+
+Detailed JSON: NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison/representative_examples.csv

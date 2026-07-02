@@ -62,6 +62,10 @@ environment is selected, submit regeneration jobs to a compute partition with
 
 Never run TrOCR, LEGIT, OCR atlas, M0, M1, M2, or other model-heavy Python scripts directly on a login node. Do not start them with `python ...` from an interactive login shell, even for a small sample, smoke test, or quick validation. Submit these workloads through Slurm with `sbatch` or run them only inside an allocated compute job. Syntax-only checks such as `python -m py_compile scripts/M0.py` are allowed because they do not load models or process data.
 
+Do not submit Slurm jobs from Codex unless the user explicitly asks in that
+same turn. By default, prepare and syntax-check the wrapper, then give the user
+the exact `sbatch` command to run manually.
+
 Build the D1 validation parquet from the 10k validation source with:
 
 ```bash

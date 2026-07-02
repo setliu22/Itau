@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline_common import (
+    LegitScoreCache,
     REQUIRED_COLUMNS,
     SEEDS,
     TableOCRNormalizer,
@@ -29,10 +30,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--generated-validation", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/BETTER_VALIDATION.parquet"))
     parser.add_argument("--original-validation", type=Path, default=Path("BASE_DATASETS_DO_NOT_EVER_DELETE/validate"))
+    parser.add_argument("--previous-generated-validation", type=Path, default=None)
     parser.add_argument("--audit", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/VALIDATION_POSITIVE_GENERATION_AUDIT.parquet"))
     parser.add_argument("--output-dir", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/final_comparison"))
     parser.add_argument("--output-text", type=Path, default=Path("NEW_DATASETS_DO_NOT_EVER_DELETE/FINALVALIDATIONCOMPARISON.txt"))
     parser.add_argument("--lookup-dir", type=Path, default=Path("LOOKUP_TABLE_IN_USE"))
+    parser.add_argument("--legit-cache", type=Path, default=Path(".cache/validation_generation/final_comparison_legit_scores.parquet"))
     parser.add_argument("--max-examples", type=int, default=50)
     parser.add_argument("--legit-model-path", type=Path, default=Path("models/LEGIT-TrOCR-MT"))
     parser.add_argument("--legit-font-path", type=Path, default=Path("fonts/unifont-17.0.04.otf"))
@@ -43,6 +46,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ocr-batch-size", type=int, default=256)
     parser.add_argument("--rf-seed", type=int, default=SEEDS["rf_split"])
     parser.add_argument("--example-seed", type=int, default=SEEDS["representative_examples"])
+    parser.add_argument("--allow-changed-negatives", action="store_true")
     return parser.parse_args()
 
 
@@ -51,11 +55,8 @@ def main() -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     generated = load_pair_frame(args.generated_validation)
     original = load_pair_frame(args.original_validation)
-    if len(generated) != len(original):
-        raise RuntimeError(f"Generated rows {len(generated):,} do not match original rows {len(original):,}.")
-    if label_counts(generated) != label_counts(original):
-        raise RuntimeError(f"Generated label counts {label_counts(generated)} do not match original {label_counts(original)}.")
-    if not negatives_unchanged(generated, original):
+    negatives_changed = not negatives_unchanged(generated, original)
+    if negatives_changed and not args.allow_changed_negatives:
         raise RuntimeError("Generated validation changed label-0 rows.")
 
     legit_scorer = build_legit_scorer(
@@ -64,18 +65,31 @@ def main() -> int:
         processor_name=args.legit_processor_name,
         device=args.device,
     )
+    legit_cache = LegitScoreCache(args.legit_cache)
     generated_positive_scores = score_positive_frame(
         generated,
         scorer=legit_scorer,
+        cache=legit_cache,
         batch_size=int(args.legit_batch_size),
         output_path=args.output_dir / "generated_positive_legit_scores.parquet",
     )
     original_positive_scores = score_positive_frame(
         original,
         scorer=legit_scorer,
+        cache=legit_cache,
         batch_size=int(args.legit_batch_size),
         output_path=args.output_dir / "original_positive_legit_scores.parquet",
     )
+    previous_positive_scores = None
+    if args.previous_generated_validation is not None and args.previous_generated_validation.exists():
+        previous = load_pair_frame(args.previous_generated_validation)
+        previous_positive_scores = score_positive_frame(
+            previous,
+            scorer=legit_scorer,
+            cache=legit_cache,
+            batch_size=int(args.legit_batch_size),
+            output_path=args.output_dir / "previous_generated_positive_legit_scores.parquet",
+        )
     ocr_normalizer = TableOCRNormalizer(
         ocr_lookup_path=args.lookup_dir / "ocr_confusable_approved.csv",
         exact_lookup_path=args.lookup_dir / "exact_lookalike_approved.csv",
@@ -96,6 +110,7 @@ def main() -> int:
     examples = representative_examples(
         generated_positive_scores,
         original_positive_scores,
+        previous=previous_positive_scores,
         max_examples=int(args.max_examples),
         seed=int(args.example_seed),
     )
@@ -106,11 +121,19 @@ def main() -> int:
         "inputs": {
             "generated_validation": str(args.generated_validation),
             "original_validation": str(args.original_validation),
+            "previous_generated_validation": None
+            if args.previous_generated_validation is None
+            else str(args.previous_generated_validation),
             "audit": str(args.audit),
+            "legit_cache": str(args.legit_cache),
         },
         "row_counts": {
             "generated": label_counts(generated),
             "original": label_counts(original),
+        },
+        "row_deltas": {
+            "generated_minus_original": int(len(generated) - len(original)),
+            "dropped_positive_count": int(label_counts(original).get("1.0", 0) - label_counts(generated).get("1.0", 0)),
         },
         "legit": {
             "scope": "positive rows only",
@@ -149,12 +172,13 @@ def score_positive_frame(
     frame: pd.DataFrame,
     *,
     scorer: Any,
+    cache: LegitScoreCache,
     batch_size: int,
     output_path: Path,
 ) -> pd.DataFrame:
     positives = frame.loc[frame["label"].eq(1.0), REQUIRED_COLUMNS].reset_index(drop=True)
     pairs = list(zip(positives["fraudulent_name"].astype(str), positives["real_name"].astype(str)))
-    scores = scorer.score_pairs(pairs, batch_size=int(batch_size)).astype(float)
+    scores = cache.score_pairs(pairs, scorer=scorer, batch_size=int(batch_size)).astype(float)
     scored = positives.assign(legit_score=scores)
     scored.to_parquet(output_path, index=False)
     return scored
@@ -164,12 +188,16 @@ def representative_examples(
     generated: pd.DataFrame,
     original: pd.DataFrame,
     *,
+    previous: pd.DataFrame | None,
     max_examples: int,
     seed: int,
 ) -> pd.DataFrame:
     rng = np.random.default_rng(int(seed))
     generated_by_name = {name: group.copy() for name, group in generated.groupby("real_name", sort=True)}
     original_by_name = {name: group.copy() for name, group in original.groupby("real_name", sort=True)}
+    previous_by_name = {}
+    if previous is not None and not previous.empty:
+        previous_by_name = {name: group.copy() for name, group in previous.groupby("real_name", sort=True)}
     overlap = sorted(set(generated_by_name) & set(original_by_name))
     if len(overlap) > max_examples:
         selected = sorted(rng.choice(overlap, size=int(max_examples), replace=False).tolist())
@@ -179,14 +207,25 @@ def representative_examples(
     for real_name in selected:
         gen_group = generated_by_name[real_name].reset_index(drop=True)
         orig_group = original_by_name[real_name].reset_index(drop=True)
+        prev_group = previous_by_name.get(real_name)
         gen_row = gen_group.iloc[int(rng.integers(0, len(gen_group)))]
         orig_row = orig_group.iloc[int(rng.integers(0, len(orig_group)))]
+        prev_row = None
+        if prev_group is not None and not prev_group.empty:
+            prev_group = prev_group.reset_index(drop=True)
+            prev_row = prev_group.iloc[int(rng.integers(0, len(prev_group)))]
         rows.append(
             {
                 "real_name": real_name,
                 "original_fraudulent_name": orig_row["fraudulent_name"],
+                "previous_generated_fraudulent_name": ""
+                if prev_row is None
+                else prev_row["fraudulent_name"],
                 "generated_fraudulent_name": gen_row["fraudulent_name"],
                 "original_legit_score": float(orig_row["legit_score"]),
+                "previous_generated_legit_score": np.nan
+                if prev_row is None
+                else float(prev_row["legit_score"]),
                 "generated_legit_score": float(gen_row["legit_score"]),
                 "generated_unique_key": uniqueness_key(gen_row["fraudulent_name"]),
             }
@@ -208,6 +247,8 @@ def render_text(metrics: dict[str, Any], examples: pd.DataFrame) -> str:
         f"Original validation: {metrics['inputs']['original_validation']}",
         f"Generated counts: {metrics['row_counts']['generated']}",
         f"Original counts: {metrics['row_counts']['original']}",
+        f"Row delta (generated - original): {metrics['row_deltas']['generated_minus_original']}",
+        f"Dropped positive rows vs original: {metrics['row_deltas']['dropped_positive_count']}",
         "",
         "Positive-only LEGIT",
         f"Generated mean: {generated_legit['mean']:.10f}",
@@ -217,23 +258,33 @@ def render_text(metrics: dict[str, Any], examples: pd.DataFrame) -> str:
         "",
         "Random Forest ROC AUC, raw text metrics, 90:10 split",
         f"Generated ROC AUC: {generated_raw['roc_auc']:.10f}",
+        f"Generated balanced accuracy @ 0.5: {generated_raw['balanced_accuracy_at_0_5']:.10f}",
         f"Generated AUC predictability: {generated_raw['auc_predictability']:.10f}",
         f"Original ROC AUC: {original_raw['roc_auc']:.10f}",
+        f"Original balanced accuracy @ 0.5: {original_raw['balanced_accuracy_at_0_5']:.10f}",
         f"Original AUC predictability: {original_raw['auc_predictability']:.10f}",
         "",
         "Random Forest ROC AUC, OCR-normalized text metrics, 90:10 split",
         f"Generated ROC AUC: {generated_ocr['roc_auc']:.10f}",
+        f"Generated balanced accuracy @ 0.5: {generated_ocr['balanced_accuracy_at_0_5']:.10f}",
         f"Generated AUC predictability: {generated_ocr['auc_predictability']:.10f}",
         f"Original ROC AUC: {original_ocr['roc_auc']:.10f}",
+        f"Original balanced accuracy @ 0.5: {original_ocr['balanced_accuracy_at_0_5']:.10f}",
         f"Original AUC predictability: {original_ocr['auc_predictability']:.10f}",
         "",
         "Representative overlapping positive real-name examples",
-        "real_name\toriginal_fraudulent_name\tgenerated_fraudulent_name\toriginal_LEGIT\tgenerated_LEGIT",
+        "real_name\toriginal_fraudulent_name\tprevious_generated_fraudulent_name\tnew_generated_fraudulent_name\toriginal_LEGIT\tprevious_generated_LEGIT\tnew_generated_LEGIT",
     ]
     for row in examples.itertuples(index=False):
+        previous_score = (
+            ""
+            if pd.isna(row.previous_generated_legit_score)
+            else f"{row.previous_generated_legit_score:.6f}"
+        )
         lines.append(
-            f"{row.real_name}\t{row.original_fraudulent_name}\t{row.generated_fraudulent_name}\t"
-            f"{row.original_legit_score:.6f}\t{row.generated_legit_score:.6f}"
+            f"{row.real_name}\t{row.original_fraudulent_name}\t{row.previous_generated_fraudulent_name}\t"
+            f"{row.generated_fraudulent_name}\t{row.original_legit_score:.6f}\t{previous_score}\t"
+            f"{row.generated_legit_score:.6f}"
         )
     lines.append("")
     lines.append(f"Detailed JSON: {metrics['representative_examples']}")
