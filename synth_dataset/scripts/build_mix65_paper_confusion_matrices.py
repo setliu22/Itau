@@ -39,6 +39,9 @@ MODELS = [
     "conv1d_bilstm",
     "conv1d_transformer",
     "conv1d_stacked_cross_attention",
+    "conv1d_interaction_cnn_cosine",
+    "conv1d_interaction_cnn_rich",
+    "conv1d_single_cross_attention",
 ]
 
 PANELS = [
@@ -106,6 +109,10 @@ def build_pdf(model_key: str) -> Path:
 
 def main() -> None:
     for model_key in MODELS:
+        metrics_path = MIX65_DIR / model_key / "metrics.json"
+        if not metrics_path.exists():
+            print(f"Skipping {model_key}: missing {metrics_path}")
+            continue
         print(build_pdf(model_key))
 
 
