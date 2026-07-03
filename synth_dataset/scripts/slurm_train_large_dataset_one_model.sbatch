@@ -30,9 +30,9 @@ if [[ ! -x "$PYTHON" ]]; then
 fi
 
 case "$MODEL_KEY" in
-  conv1d_baseline|conv1d_bilstm|conv1d_transformer|conv1d_stacked_cross_attention) ;;
+  conv1d_baseline|conv1d_bilstm|conv1d_transformer|conv1d_stacked_cross_attention|conv1d_single_cross_attention|conv1d_interaction_cnn_cosine|conv1d_interaction_cnn_rich) ;;
   *)
-    echo "MODEL_KEY must be one of: conv1d_baseline, conv1d_bilstm, conv1d_transformer, conv1d_stacked_cross_attention" >&2
+    echo "MODEL_KEY must be one of: conv1d_baseline, conv1d_bilstm, conv1d_transformer, conv1d_stacked_cross_attention, conv1d_single_cross_attention, conv1d_interaction_cnn_cosine, conv1d_interaction_cnn_rich" >&2
     exit 1
     ;;
 esac

@@ -12,12 +12,16 @@ import argparse
 import csv
 import json
 import pickle
+import random
 import shutil
 import sys
 import time
 import os
 from pathlib import Path
 from typing import Any
+
+Path(__file__).resolve().parents[1].joinpath(".cache", "matplotlib").mkdir(parents=True, exist_ok=True)
+os.environ["MPLCONFIGDIR"] = str(Path(__file__).resolve().parents[1] / ".cache" / "matplotlib")
 
 import matplotlib
 
@@ -29,7 +33,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import yaml
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import auc, roc_auc_score, roc_curve
 from torch.utils.data import DataLoader
 
 
@@ -39,6 +43,9 @@ MODEL_CONFIGS = {
     "conv1d_bilstm": "configs/bilistm.yaml",
     "conv1d_transformer": "configs/transformer.yaml",
     "conv1d_stacked_cross_attention": "configs/stacked_cross_attention.yaml",
+    "conv1d_single_cross_attention": "configs/single_cross_attention.yaml",
+    "conv1d_interaction_cnn_cosine": "configs/interaction_cnn_cosine.yaml",
+    "conv1d_interaction_cnn_rich": "configs/interaction_cnn_rich.yaml",
 }
 
 
@@ -127,6 +134,7 @@ def main() -> int:
         json.dumps(to_jsonable(manifest), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    write_model_comparison(args.output_dir)
     print(f"Wrote {args.output_dir}", flush=True)
     return 0
 
@@ -246,6 +254,120 @@ class StackedCrossAttentionHead(nn.Module):
         return self.linear(cos_sim.unsqueeze(1)).squeeze(1)
 
 
+class SingleCrossAttentionHead(nn.Module):
+    """One bidirectional cross-attention pass followed by pooled MLP scoring."""
+
+    def __init__(
+        self,
+        embed_dim: int = 128,
+        nhead: int = 4,
+        hidden_dim: int = 128,
+        dropout: float = 0.0,
+    ) -> None:
+        super().__init__()
+        if embed_dim % nhead != 0:
+            raise ValueError(f"embed_dim ({embed_dim}) must be divisible by nhead ({nhead})")
+        self.cross_ab = nn.MultiheadAttention(embed_dim, nhead, dropout=dropout, batch_first=True)
+        self.cross_ba = nn.MultiheadAttention(embed_dim, nhead, dropout=dropout, batch_first=True)
+        self.norm_a = nn.LayerNorm(embed_dim)
+        self.norm_b = nn.LayerNorm(embed_dim)
+        self.dropout = nn.Dropout(dropout)
+        self.classifier = nn.Sequential(
+            nn.Linear(embed_dim * 2, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, 1),
+        )
+
+    def forward(
+        self,
+        seq_a: torch.Tensor,
+        lengths_a: torch.Tensor,
+        seq_b: torch.Tensor,
+        lengths_b: torch.Tensor,
+    ) -> torch.Tensor:
+        mask_a = sequence_padding_mask(lengths_a, seq_a.shape[1])
+        mask_b = sequence_padding_mask(lengths_b, seq_b.shape[1])
+        seq_a = zero_padded(seq_a, mask_a)
+        seq_b = zero_padded(seq_b, mask_b)
+        attn_a, _ = self.cross_ab(seq_a, seq_b, seq_b, key_padding_mask=mask_b, need_weights=False)
+        attn_b, _ = self.cross_ba(seq_b, seq_a, seq_a, key_padding_mask=mask_a, need_weights=False)
+        seq_a = zero_padded(self.norm_a(seq_a + self.dropout(attn_a)), mask_a)
+        seq_b = zero_padded(self.norm_b(seq_b + self.dropout(attn_b)), mask_b)
+        pooled = torch.cat([masked_mean(seq_a, mask_a), masked_mean(seq_b, mask_b)], dim=1)
+        return self.classifier(pooled).squeeze(1)
+
+
+class InteractionMapCnnHead(nn.Module):
+    """2D CNN over pairwise slice-similarity maps."""
+
+    CHANNEL_OPTIONS = ("cosine", "rich")
+
+    def __init__(
+        self,
+        embed_dim: int = 128,
+        channels: str = "cosine",
+        hidden_channels: int = 32,
+        classifier_hidden: int = 64,
+        dropout: float = 0.0,
+    ) -> None:
+        super().__init__()
+        if channels not in self.CHANNEL_OPTIONS:
+            raise ValueError(f"channels must be one of {self.CHANNEL_OPTIONS}, got {channels!r}")
+        self.embed_dim = embed_dim
+        self.channels = channels
+        in_channels = 1 if channels == "cosine" else 4
+        self.conv1 = nn.Conv2d(in_channels, hidden_channels, kernel_size=3, padding=1)
+        self.norm1 = nn.GroupNorm(1, hidden_channels)
+        self.conv2 = nn.Conv2d(hidden_channels, hidden_channels, kernel_size=3, padding=1)
+        self.norm2 = nn.GroupNorm(1, hidden_channels)
+        self.dropout = nn.Dropout(dropout)
+        self.classifier = nn.Sequential(
+            nn.Linear(hidden_channels, classifier_hidden),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(classifier_hidden, 1),
+        )
+
+    def forward(
+        self,
+        seq_a: torch.Tensor,
+        lengths_a: torch.Tensor,
+        seq_b: torch.Tensor,
+        lengths_b: torch.Tensor,
+    ) -> torch.Tensor:
+        mask_a = sequence_padding_mask(lengths_a, seq_a.shape[1])
+        mask_b = sequence_padding_mask(lengths_b, seq_b.shape[1])
+        seq_a = zero_padded(seq_a, mask_a)
+        seq_b = zero_padded(seq_b, mask_b)
+        pair_mask = (~mask_a).unsqueeze(2) & (~mask_b).unsqueeze(1)
+        x = self._interaction_tensor(seq_a, seq_b, pair_mask)
+        pair_mask_f = pair_mask.unsqueeze(1).float()
+        x = x * pair_mask_f
+        x = F.gelu(self.norm1(self.conv1(x))) * pair_mask_f
+        x = self.dropout(x)
+        x = F.gelu(self.norm2(self.conv2(x))) * pair_mask_f
+        denom = pair_mask_f.sum(dim=(2, 3)).clamp(min=1.0)
+        pooled = x.sum(dim=(2, 3)) / denom
+        return self.classifier(pooled).squeeze(1)
+
+    def _interaction_tensor(
+        self,
+        seq_a: torch.Tensor,
+        seq_b: torch.Tensor,
+        pair_mask: torch.Tensor,
+    ) -> torch.Tensor:
+        cosine = torch.einsum("bld,bmd->blm", F.normalize(seq_a, dim=-1), F.normalize(seq_b, dim=-1))
+        if self.channels == "cosine":
+            return cosine.unsqueeze(1)
+        dot = torch.einsum("bld,bmd->blm", seq_a, seq_b)
+        scaled_dot = dot / (self.embed_dim ** 0.5)
+        mean_product = dot / self.embed_dim
+        mean_abs_diff = torch.cdist(seq_a, seq_b, p=1) / self.embed_dim
+        rich = torch.stack([cosine, scaled_dot, -mean_abs_diff, mean_product], dim=1)
+        return rich.masked_fill(~pair_mask.unsqueeze(1), 0.0)
+
+
 def sequence_padding_mask(lengths: torch.Tensor, seq_len: int) -> torch.Tensor:
     positions = torch.arange(seq_len, device=lengths.device).unsqueeze(0)
     return positions >= lengths.unsqueeze(1)
@@ -271,9 +393,12 @@ def build_model_for_config(
     external_visual_encoder: Any,
 ) -> tuple[nn.Module, nn.Module, bool]:
     model_cfg = cfg["model"]
-    if model_cfg.get("pair_head") != "stacked_cross_attention":
+    pair_head = model_cfg.get("pair_head")
+    if pair_head is None:
         encoder, head = external_build_model(cfg, device)
         return encoder, head, False
+    if pair_head not in {"stacked_cross_attention", "single_cross_attention", "interaction_cnn"}:
+        raise ValueError(f"Unknown pair_head: {pair_head!r}")
 
     r = cfg["rendering"]
     s = cfg["slicing"]
@@ -284,13 +409,29 @@ def build_model_for_config(
         pooling=model_cfg.get("pooling", "attention"),
         encoder_type=model_cfg.get("encoder_type", "transformer"),
     ).to(device)
-    head = StackedCrossAttentionHead(
-        embed_dim=int(model_cfg["embed_dim"]),
-        nhead=int(model_cfg.get("cross_attention_heads", 4)),
-        num_layers=int(model_cfg.get("cross_attention_layers", 4)),
-        dim_feedforward=int(model_cfg.get("cross_attention_feedforward", 256)),
-        dropout=float(model_cfg.get("dropout", 0.0)),
-    ).to(device)
+    if pair_head == "stacked_cross_attention":
+        head = StackedCrossAttentionHead(
+            embed_dim=int(model_cfg["embed_dim"]),
+            nhead=int(model_cfg.get("cross_attention_heads", 4)),
+            num_layers=int(model_cfg.get("cross_attention_layers", 4)),
+            dim_feedforward=int(model_cfg.get("cross_attention_feedforward", 256)),
+            dropout=float(model_cfg.get("dropout", 0.0)),
+        ).to(device)
+    elif pair_head == "single_cross_attention":
+        head = SingleCrossAttentionHead(
+            embed_dim=int(model_cfg["embed_dim"]),
+            nhead=int(model_cfg.get("cross_attention_heads", 4)),
+            hidden_dim=int(model_cfg.get("classifier_hidden", model_cfg["embed_dim"])),
+            dropout=float(model_cfg.get("dropout", 0.0)),
+        ).to(device)
+    else:
+        head = InteractionMapCnnHead(
+            embed_dim=int(model_cfg["embed_dim"]),
+            channels=str(model_cfg.get("interaction_channels", "cosine")),
+            hidden_channels=int(model_cfg.get("interaction_hidden_channels", 32)),
+            classifier_hidden=int(model_cfg.get("interaction_classifier_hidden", 64)),
+            dropout=float(model_cfg.get("dropout", 0.0)),
+        ).to(device)
     return encoder, head, True
 
 
@@ -351,10 +492,12 @@ def train_and_evaluate_model(
         lr=float(cfg["training"]["lr"]),
     )
     criterion = nn.BCEWithLogitsLoss()
+    trainable_parameters = count_trainable_parameters(encoder, head)
     log_path = model_dir / "log.csv"
     best_auc = -1.0
     best_epoch = None
     start_epoch = 1
+    history: list[dict[str, Any]] = []
     latest_path = model_dir / "latest.pt"
     history_dir = model_dir / "checkpoint_history"
     history_dir.mkdir(parents=True, exist_ok=True)
@@ -362,6 +505,7 @@ def train_and_evaluate_model(
         raise FileNotFoundError(f"--resume requested but no checkpoint exists: {latest_path}")
     if resume:
         checkpoint = torch.load(latest_path, map_location=device)
+        validate_checkpoint_compatibility(checkpoint, cfg)
         encoder.load_state_dict(checkpoint["encoder"])
         head.load_state_dict(checkpoint["head"])
         if "optimizer" in checkpoint:
@@ -369,6 +513,8 @@ def train_and_evaluate_model(
         start_epoch = int(checkpoint.get("epoch", 0)) + 1
         best_auc = float(checkpoint.get("best_auc", -1.0))
         best_epoch = int(checkpoint.get("best_epoch", checkpoint.get("epoch", 0))) or None
+        history = list(checkpoint.get("history", []))
+        restore_random_state(checkpoint.get("random_state"))
         print(
             f"Resuming {cfg['run_name']} from {latest_path} at epoch {start_epoch} "
             f"with best_auc={best_auc:.6f}",
@@ -376,7 +522,7 @@ def train_and_evaluate_model(
         )
     if not resume or not log_path.exists() or start_epoch <= 1:
         with log_path.open("w", newline="") as handle:
-            csv.writer(handle).writerow(["epoch", "train_loss", "val_loss", "val_auc"])
+            csv.writer(handle).writerow(["epoch", "train_loss", "val_loss", "val_auc", "epoch_seconds"])
 
     start_time = time.time()
     for epoch in range(start_epoch, int(cfg["training"]["num_epochs"]) + 1):
@@ -385,37 +531,63 @@ def train_and_evaluate_model(
         train_loss, _, _ = epoch_runner(encoder, head, train_loader, criterion, optimizer, device)
         val_loss, val_scores, val_labels = epoch_runner(encoder, head, val_loader, criterion, None, device)
         val_auc = float(roc_auc_score(val_labels, val_scores))
+        epoch_seconds = float(time.time() - epoch_start)
+        history.append(
+            {
+                "epoch": epoch,
+                "train_loss": float(train_loss),
+                "val_loss": float(val_loss),
+                "val_auc": val_auc,
+                "epoch_seconds": epoch_seconds,
+            }
+        )
         with log_path.open("a", newline="") as handle:
-            csv.writer(handle).writerow([epoch, train_loss, val_loss, val_auc])
+            csv.writer(handle).writerow([epoch, train_loss, val_loss, val_auc, epoch_seconds])
         print(
             f"{cfg['run_name']} epoch {epoch}/{cfg['training']['num_epochs']} "
             f"train_loss={train_loss:.4f} val_loss={val_loss:.4f} val_auc={val_auc:.4f} "
-            f"({time.time() - epoch_start:.1f}s)",
+            f"({epoch_seconds:.1f}s)",
             flush=True,
+        )
+        latest_payload = build_checkpoint_payload(
+            cfg=cfg,
+            epoch=epoch,
+            val_auc=val_auc,
+            best_auc=best_auc,
+            best_epoch=best_epoch,
+            encoder=encoder,
+            head=head,
+            optimizer=optimizer,
+            history=history,
+            trainable_parameters=trainable_parameters,
         )
         if val_auc > best_auc:
             best_auc = val_auc
             best_epoch = epoch
+            latest_payload["best_auc"] = best_auc
+            latest_payload["best_epoch"] = best_epoch
             save_checkpoint_atomic(
                 model_dir / "best.pt",
-                {
-                    "epoch": epoch,
-                    "val_auc": val_auc,
-                    "encoder": encoder.state_dict(),
-                    "head": head.state_dict(),
-                },
+                latest_payload,
             )
-        latest_payload = {
-            "epoch": epoch,
-            "best_auc": best_auc,
-            "best_epoch": best_epoch,
-            "encoder": encoder.state_dict(),
-            "head": head.state_dict(),
-            "optimizer": optimizer.state_dict(),
-        }
         save_checkpoint_atomic(history_dir / f"epoch_{epoch:04d}.pt", latest_payload)
         save_checkpoint_atomic(model_dir / "latest.pt", latest_payload)
 
+    save_checkpoint_atomic(
+        model_dir / "final.pt",
+        build_checkpoint_payload(
+            cfg=cfg,
+            epoch=int(cfg["training"]["num_epochs"]),
+            val_auc=float(history[-1]["val_auc"]) if history else best_auc,
+            best_auc=best_auc,
+            best_epoch=best_epoch,
+            encoder=encoder,
+            head=head,
+            optimizer=optimizer,
+            history=history,
+            trainable_parameters=trainable_parameters,
+        ),
+    )
     checkpoint = torch.load(model_dir / "best.pt", map_location=device)
     encoder.load_state_dict(checkpoint["encoder"])
     head.load_state_dict(checkpoint["head"])
@@ -430,18 +602,24 @@ def train_and_evaluate_model(
         split_metrics[split] = metrics
         write_predictions(model_dir / f"{split}_predictions.parquet", scores, labels)
         plot_confusions(model_dir, split, metrics)
+        plot_roc_curve(model_dir, split, scores, labels)
 
     plot_training_curves(log_path, model_dir / "training_curves.png", str(cfg["run_name"]))
+    epoch_times = [float(row["epoch_seconds"]) for row in history if "epoch_seconds" in row]
     result = {
         "run_name": cfg["run_name"],
         "config": cfg,
         "best_epoch": best_epoch,
         "best_val_auc": float(best_auc),
+        "trainable_parameter_count": int(trainable_parameters),
+        "average_epoch_seconds": float(np.mean(epoch_times)) if epoch_times else None,
+        "total_epochs_completed": int(len(history)),
         "elapsed_seconds": float(time.time() - start_time),
         "split_metrics": split_metrics,
         "artifacts": {
             "best_checkpoint": str(model_dir / "best.pt"),
             "latest_checkpoint": str(model_dir / "latest.pt"),
+            "final_checkpoint": str(model_dir / "final.pt"),
             "config": str(model_dir / "config.yaml"),
             "log": str(log_path),
             "training_curves": str(model_dir / "training_curves.png"),
@@ -558,6 +736,105 @@ def save_checkpoint_atomic(path: Path, payload: dict[str, Any]) -> None:
     os.replace(tmp_path, path)
 
 
+def count_trainable_parameters(*modules: nn.Module) -> int:
+    return int(sum(p.numel() for module in modules for p in module.parameters() if p.requires_grad))
+
+
+def config_fingerprint(cfg: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "run_name": cfg.get("run_name"),
+        "rendering": cfg.get("rendering"),
+        "slicing": cfg.get("slicing"),
+        "model": cfg.get("model"),
+        "training": {
+            key: cfg.get("training", {}).get(key)
+            for key in ["batch_size", "lr", "num_epochs", "seed"]
+        },
+    }
+
+
+def validate_checkpoint_compatibility(checkpoint: dict[str, Any], cfg: dict[str, Any]) -> None:
+    stored = checkpoint.get("config_fingerprint")
+    if stored is None:
+        return
+    current = config_fingerprint(cfg)
+    if stored != current:
+        raise ValueError(
+            "Refusing to resume from an incompatible checkpoint. "
+            f"Stored fingerprint={stored}; current fingerprint={current}"
+        )
+
+
+def capture_random_state() -> dict[str, Any]:
+    np_state = np.random.get_state()
+    return {
+        "python": random.getstate(),
+        "numpy": {
+            "bit_generator": np_state[0],
+            "state": np_state[1].tolist(),
+            "pos": int(np_state[2]),
+            "has_gauss": int(np_state[3]),
+            "cached_gaussian": float(np_state[4]),
+        },
+        "torch_cpu": torch.get_rng_state(),
+        "torch_cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else [],
+    }
+
+
+def restore_random_state(state: dict[str, Any] | None) -> None:
+    if not state:
+        return
+    if "python" in state:
+        random.setstate(state["python"])
+    if "numpy" in state:
+        np_state = state["numpy"]
+        np.random.set_state(
+            (
+                np_state["bit_generator"],
+                np.array(np_state["state"], dtype=np.uint32),
+                int(np_state["pos"]),
+                int(np_state["has_gauss"]),
+                float(np_state["cached_gaussian"]),
+            )
+        )
+    if "torch_cpu" in state:
+        torch.set_rng_state(state["torch_cpu"])
+    if torch.cuda.is_available() and state.get("torch_cuda"):
+        torch.cuda.set_rng_state_all(state["torch_cuda"])
+
+
+def build_checkpoint_payload(
+    *,
+    cfg: dict[str, Any],
+    epoch: int,
+    val_auc: float,
+    best_auc: float,
+    best_epoch: int | None,
+    encoder: nn.Module,
+    head: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    history: list[dict[str, Any]],
+    trainable_parameters: int,
+) -> dict[str, Any]:
+    return {
+        "epoch": int(epoch),
+        "val_auc": float(val_auc),
+        "best_auc": float(best_auc),
+        "best_epoch": best_epoch,
+        "early_stopping_counter": 0,
+        "encoder": encoder.state_dict(),
+        "head": head.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "scheduler": None,
+        "grad_scaler": None,
+        "history": list(history),
+        "config": cfg,
+        "config_fingerprint": config_fingerprint(cfg),
+        "trainable_parameter_count": int(trainable_parameters),
+        "random_state": capture_random_state(),
+    }
+
+
 def write_predictions(path: Path, scores: np.ndarray, labels: np.ndarray) -> None:
     frame = pd.DataFrame(
         {
@@ -587,6 +864,28 @@ def plot_confusions(model_dir: Path, split: str, metrics: dict[str, Any]) -> Non
         fig.tight_layout()
         fig.savefig(model_dir / f"{split}_confusion_matrix_{suffix}.png", dpi=160)
         plt.close(fig)
+
+
+def plot_roc_curve(model_dir: Path, split: str, scores: np.ndarray, labels: np.ndarray) -> None:
+    fpr, tpr, thresholds = roc_curve(labels, scores)
+    roc_auc = float(auc(fpr, tpr))
+    pd.DataFrame(
+        {
+            "fpr": fpr.astype(float),
+            "tpr": tpr.astype(float),
+            "threshold": thresholds.astype(float),
+        }
+    ).to_parquet(model_dir / f"{split}_roc_curve.parquet", index=False)
+    fig, ax = plt.subplots(figsize=(4.8, 4.0))
+    ax.plot(fpr, tpr, label=f"ROC-AUC = {roc_auc:.4f}")
+    ax.plot([0, 1], [0, 1], linestyle="--", color="0.6", linewidth=1)
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title(f"{split} ROC curve")
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(model_dir / f"{split}_roc_curve.png", dpi=160)
+    plt.close(fig)
 
 
 def plot_training_curves(log_path: Path, output_path: Path, title: str) -> None:
@@ -638,6 +937,44 @@ def to_jsonable(value: Any) -> Any:
     if isinstance(value, Path):
         return str(value)
     return value
+
+
+def write_model_comparison(output_dir: Path) -> None:
+    rows = []
+    for metrics_path in sorted(output_dir.glob("*/metrics.json")):
+        try:
+            metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        split_metrics = metrics.get("split_metrics", {})
+        test_fixed = split_metrics.get("test", {}).get("fixed_threshold", {})
+        validation = split_metrics.get("validation", {})
+        train = split_metrics.get("train", {})
+        rows.append(
+            {
+                "run_name": metrics.get("run_name", metrics_path.parent.name),
+                "best_val_auc": metrics.get("best_val_auc"),
+                "test_roc_auc": split_metrics.get("test", {}).get("roc_auc"),
+                "test_accuracy_0_5": test_fixed.get("accuracy"),
+                "test_precision_0_5": test_fixed.get("precision"),
+                "test_recall_0_5": test_fixed.get("recall"),
+                "test_f1_0_5": test_fixed.get("f1"),
+                "test_mcc_0_5": test_fixed.get("mcc"),
+                "train_roc_auc": train.get("roc_auc"),
+                "validation_roc_auc": validation.get("roc_auc"),
+                "trainable_parameter_count": metrics.get("trainable_parameter_count"),
+                "average_epoch_seconds": metrics.get("average_epoch_seconds"),
+                "best_epoch": metrics.get("best_epoch"),
+                "total_epochs_completed": metrics.get("total_epochs_completed"),
+                "elapsed_seconds": metrics.get("elapsed_seconds"),
+                "metrics_path": str(metrics_path),
+            }
+        )
+    if not rows:
+        return
+    frame = pd.DataFrame(rows).sort_values("run_name")
+    frame.to_csv(output_dir / "model_comparison.csv", index=False)
+    frame.to_json(output_dir / "model_comparison.json", orient="records", indent=2)
 
 
 if __name__ == "__main__":
