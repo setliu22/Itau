@@ -525,13 +525,36 @@ def train_and_evaluate_model(
             csv.writer(handle).writerow(["epoch", "train_loss", "val_loss", "val_auc", "epoch_seconds"])
 
     start_time = time.time()
+    stopped_for_nonfinite = False
     for epoch in range(start_epoch, int(cfg["training"]["num_epochs"]) + 1):
         epoch_start = time.time()
         epoch_runner = run_pairwise_epoch if uses_pairwise_head else external_run_epoch
         train_loss, _, _ = epoch_runner(encoder, head, train_loader, criterion, optimizer, device)
         val_loss, val_scores, val_labels = epoch_runner(encoder, head, val_loader, criterion, None, device)
-        val_auc = float(roc_auc_score(val_labels, val_scores))
         epoch_seconds = float(time.time() - epoch_start)
+        if not finite_epoch_outputs(train_loss, val_loss, val_scores):
+            stopped_for_nonfinite = True
+            print(
+                f"{cfg['run_name']} epoch {epoch}/{cfg['training']['num_epochs']} "
+                "produced non-finite train/validation outputs; stopping training "
+                "and evaluating the best checkpoint.",
+                flush=True,
+            )
+            with log_path.open("a", newline="") as handle:
+                csv.writer(handle).writerow([epoch, train_loss, val_loss, "nan", epoch_seconds])
+            break
+        val_auc = float(roc_auc_score(val_labels, val_scores))
+        if not np.isfinite(val_auc):
+            stopped_for_nonfinite = True
+            print(
+                f"{cfg['run_name']} epoch {epoch}/{cfg['training']['num_epochs']} "
+                "produced non-finite validation ROC-AUC; stopping training "
+                "and evaluating the best checkpoint.",
+                flush=True,
+            )
+            with log_path.open("a", newline="") as handle:
+                csv.writer(handle).writerow([epoch, train_loss, val_loss, "nan", epoch_seconds])
+            break
         history.append(
             {
                 "epoch": epoch,
@@ -573,11 +596,16 @@ def train_and_evaluate_model(
         save_checkpoint_atomic(history_dir / f"epoch_{epoch:04d}.pt", latest_payload)
         save_checkpoint_atomic(model_dir / "latest.pt", latest_payload)
 
+    final_epoch = int(history[-1]["epoch"]) if history else int(start_epoch) - 1
+    if stopped_for_nonfinite:
+        checkpoint = torch.load(model_dir / "best.pt", map_location=device)
+        encoder.load_state_dict(checkpoint["encoder"])
+        head.load_state_dict(checkpoint["head"])
     save_checkpoint_atomic(
         model_dir / "final.pt",
         build_checkpoint_payload(
             cfg=cfg,
-            epoch=int(cfg["training"]["num_epochs"]),
+            epoch=final_epoch,
             val_auc=float(history[-1]["val_auc"]) if history else best_auc,
             best_auc=best_auc,
             best_epoch=best_epoch,
@@ -736,6 +764,13 @@ def save_checkpoint_atomic(path: Path, payload: dict[str, Any]) -> None:
     os.replace(tmp_path, path)
 
 
+def finite_epoch_outputs(train_loss: float, val_loss: float, val_scores: list[float]) -> bool:
+    if not np.isfinite(float(train_loss)) or not np.isfinite(float(val_loss)):
+        return False
+    scores = np.asarray(val_scores, dtype=np.float64)
+    return bool(scores.size and np.all(np.isfinite(scores)))
+
+
 def count_trainable_parameters(*modules: nn.Module) -> int:
     return int(sum(p.numel() for module in modules for p in module.parameters() if p.requires_grad))
 
@@ -798,9 +833,15 @@ def restore_random_state(state: dict[str, Any] | None) -> None:
             )
         )
     if "torch_cpu" in state:
-        torch.set_rng_state(state["torch_cpu"])
+        torch.set_rng_state(as_rng_tensor(state["torch_cpu"]))
     if torch.cuda.is_available() and state.get("torch_cuda"):
-        torch.cuda.set_rng_state_all(state["torch_cuda"])
+        torch.cuda.set_rng_state_all([as_rng_tensor(item) for item in state["torch_cuda"]])
+
+
+def as_rng_tensor(value: Any) -> torch.ByteTensor:
+    if isinstance(value, torch.Tensor):
+        return value.cpu().to(torch.uint8)
+    return torch.tensor(value, dtype=torch.uint8)
 
 
 def build_checkpoint_payload(
