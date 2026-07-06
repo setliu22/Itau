@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=large-spoof-model
-#SBATCH --output=outputs/slurm_logs_archive/%x-%j.out
-#SBATCH --error=outputs/slurm_logs_archive/%x-%j.err
-#SBATCH --time=48:00:00
-#SBATCH --partition=mit_preemptable
+#SBATCH --output=/home/setliu22/Itau/synth_dataset/outputs/slurm_logs_archive/%x-%j.out
+#SBATCH --error=/home/setliu22/Itau/synth_dataset/outputs/slurm_logs_archive/%x-%j.err
+#SBATCH --time=04:00:00
+#SBATCH --partition=mit_normal_gpu
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:1
 #SBATCH --no-requeue
 
 set -euo pipefail
 
 cd /home/setliu22/Itau/synth_dataset
-mkdir -p outputs/slurm_logs_archive model_results/mix65 .cache/matplotlib
 
 PYTHON=/home/setliu22/.conda/envs/itau/bin/python
 CONDA_PREFIX=/home/setliu22/.conda/envs/itau
 MODEL_KEY="${MODEL_KEY:-}"
 RESUME="${RESUME:-0}"
+OUTPUT_DIR="${OUTPUT_DIR:-model_results/mix65_sweep_best_strip_32_16_mean}"
+mkdir -p outputs/slurm_logs_archive "$OUTPUT_DIR" .cache/matplotlib
 
 if [[ "${SLURM_RESTART_COUNT:-0}" != "0" ]]; then
   echo "Refusing to run requeued job ${SLURM_JOB_ID:-unknown}; SLURM_RESTART_COUNT=${SLURM_RESTART_COUNT}" >&2
@@ -30,9 +31,9 @@ if [[ ! -x "$PYTHON" ]]; then
 fi
 
 case "$MODEL_KEY" in
-  conv1d_baseline|conv1d_bilstm|conv1d_transformer|conv1d_stacked_cross_attention|conv1d_single_cross_attention|conv1d_interaction_cnn_cosine|conv1d_interaction_cnn_rich) ;;
+  conv1d_baseline|conv1d_bilstm|conv1d_transformer|conv1d_stacked_cross_attention|conv1d_single_cross_attention|conv1d_interaction_cnn_cosine) ;;
   *)
-    echo "MODEL_KEY must be one of: conv1d_baseline, conv1d_bilstm, conv1d_transformer, conv1d_stacked_cross_attention, conv1d_single_cross_attention, conv1d_interaction_cnn_cosine, conv1d_interaction_cnn_rich" >&2
+    echo "MODEL_KEY must be one of: conv1d_baseline, conv1d_bilstm, conv1d_transformer, conv1d_stacked_cross_attention, conv1d_single_cross_attention, conv1d_interaction_cnn_cosine" >&2
     exit 1
     ;;
 esac
@@ -66,7 +67,7 @@ fi
   --train generated_datasets/mix65/train.parquet \
   --test generated_datasets/mix65/test.parquet \
   --validation generated_datasets/mix65/validation.parquet \
-  --output-dir model_results/mix65 \
+  --output-dir "$OUTPUT_DIR" \
   --external-repo /home/setliu22/fine-grained-homoglyph-detection \
   --device cuda \
   --models "$MODEL_KEY" \

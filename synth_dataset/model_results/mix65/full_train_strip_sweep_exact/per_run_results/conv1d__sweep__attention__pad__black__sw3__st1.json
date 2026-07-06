@@ -1,0 +1,18 @@
+{
+  "background": "black",
+  "best_epoch": 1,
+  "best_val_auc": 0.5844788586827059,
+  "encoder_type": "conv1d",
+  "error": "",
+  "max_batches": null,
+  "max_samples": null,
+  "num_epochs": 5,
+  "pad_to_width": null,
+  "pooling": "attention",
+  "remove_padding": true,
+  "run_name": "conv1d__sweep__attention__pad__black__sw3__st1",
+  "slice_width": 3,
+  "status": "ok",
+  "stride": 1,
+  "total_seconds": 1434.3966886997223
+}

@@ -1,0 +1,18 @@
+{
+  "background": "black",
+  "best_epoch": -1,
+  "best_val_auc": NaN,
+  "encoder_type": "conv1d",
+  "error": "RuntimeError('CUDA error: uncorrectable ECC error encountered\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\n')",
+  "max_batches": null,
+  "max_samples": null,
+  "num_epochs": 5,
+  "pad_to_width": null,
+  "pooling": "attention",
+  "remove_padding": false,
+  "run_name": "conv1d__sweep__attention__nopad__black__sw6__st6",
+  "slice_width": 6,
+  "status": "failed",
+  "stride": 6,
+  "total_seconds": 0.6938917636871338
+}

@@ -17,11 +17,14 @@ import shutil
 import sys
 import time
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
-Path(__file__).resolve().parents[1].joinpath(".cache", "matplotlib").mkdir(parents=True, exist_ok=True)
-os.environ["MPLCONFIGDIR"] = str(Path(__file__).resolve().parents[1] / ".cache" / "matplotlib")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT.joinpath(".cache", "matplotlib").mkdir(parents=True, exist_ok=True)
+os.environ["MPLCONFIGDIR"] = str(PROJECT_ROOT / ".cache" / "matplotlib")
+os.environ.setdefault("XDG_CACHE_HOME", str(PROJECT_ROOT / ".cache"))
 
 import matplotlib
 
@@ -47,6 +50,14 @@ MODEL_CONFIGS = {
     "conv1d_interaction_cnn_cosine": "configs/interaction_cnn_cosine.yaml",
     "conv1d_interaction_cnn_rich": "configs/interaction_cnn_rich.yaml",
 }
+DEFAULT_MODEL_KEYS = [
+    "conv1d_baseline",
+    "conv1d_bilstm",
+    "conv1d_transformer",
+    "conv1d_stacked_cross_attention",
+    "conv1d_single_cross_attention",
+    "conv1d_interaction_cnn_cosine",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,7 +67,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--test", type=Path, default=Path("generated_datasets/mix65/test.parquet"))
     parser.add_argument("--validation", type=Path, default=Path("generated_datasets/mix65/validation.parquet"))
     parser.add_argument("--output-dir", type=Path, default=Path("model_results/mix65"))
-    parser.add_argument("--models", nargs="+", choices=sorted(MODEL_CONFIGS), default=list(MODEL_CONFIGS))
+    parser.add_argument("--models", nargs="+", choices=sorted(MODEL_CONFIGS), default=DEFAULT_MODEL_KEYS)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--resume", action="store_true", help="Resume each requested model from latest.pt when present.")
@@ -445,21 +456,77 @@ def convert_parquets_to_pickles(args: argparse.Namespace) -> dict[str, Path]:
     }
     paths = {}
     for split, source in sources.items():
-        frame = pd.read_parquet(source)
-        missing = set(REQUIRED_COLUMNS) - set(frame.columns)
-        if missing:
-            raise ValueError(f"{source} missing required columns: {sorted(missing)}")
-        frame = frame[REQUIRED_COLUMNS].copy()
-        frame["fraudulent_name"] = frame["fraudulent_name"].fillna("").astype(str)
-        frame["real_name"] = frame["real_name"].fillna("").astype(str)
-        frame["label"] = frame["label"].astype(float).astype(int)
-        rows = list(frame[["fraudulent_name", "real_name", "label"]].itertuples(index=False, name=None))
         path = output_dir / f"{split}.pkl"
-        with path.open("wb") as handle:
-            pickle.dump(rows, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        frame.to_csv(output_dir / f"{split}.csv", index=False)
+        if is_valid_pickle(path):
+            paths[split] = path
+            continue
+        lock_path = output_dir / f"{split}.lock"
+        with file_lock(lock_path):
+            if is_valid_pickle(path):
+                paths[split] = path
+                continue
+            write_split_pickle_and_csv(source, path, output_dir / f"{split}.csv")
         paths[split] = path
     return paths
+
+
+class file_lock:
+    def __init__(self, path: Path, poll_seconds: float = 1.0, timeout_seconds: float = 1800.0) -> None:
+        self.path = path
+        self.poll_seconds = poll_seconds
+        self.timeout_seconds = timeout_seconds
+        self.fd: int | None = None
+
+    def __enter__(self):
+        start = time.time()
+        while True:
+            try:
+                self.fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(self.fd, f"{os.getpid()}\n".encode("utf-8"))
+                return self
+            except FileExistsError:
+                if time.time() - start > self.timeout_seconds:
+                    raise TimeoutError(f"Timed out waiting for lock: {self.path}")
+                time.sleep(self.poll_seconds)
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
+        try:
+            self.path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def is_valid_pickle(path: Path) -> bool:
+    if not path.exists() or path.stat().st_size == 0:
+        return False
+    try:
+        with path.open("rb") as handle:
+            rows = pickle.load(handle)
+        return isinstance(rows, list) and len(rows) > 0
+    except (EOFError, pickle.UnpicklingError, OSError):
+        return False
+
+
+def write_split_pickle_and_csv(source: Path, pickle_path: Path, csv_path: Path) -> None:
+    frame = pd.read_parquet(source)
+    missing = set(REQUIRED_COLUMNS) - set(frame.columns)
+    if missing:
+        raise ValueError(f"{source} missing required columns: {sorted(missing)}")
+    frame = frame[REQUIRED_COLUMNS].copy()
+    frame["fraudulent_name"] = frame["fraudulent_name"].fillna("").astype(str)
+    frame["real_name"] = frame["real_name"].fillna("").astype(str)
+    frame["label"] = frame["label"].astype(float).astype(int)
+    rows = list(frame[["fraudulent_name", "real_name", "label"]].itertuples(index=False, name=None))
+    with tempfile.NamedTemporaryFile(dir=pickle_path.parent, delete=False) as handle:
+        tmp_path = Path(handle.name)
+        pickle.dump(rows, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    tmp_path.replace(pickle_path)
+    csv_tmp = csv_path.with_suffix(csv_path.suffix + ".tmp")
+    frame.to_csv(csv_tmp, index=False)
+    csv_tmp.replace(csv_path)
 
 
 def train_and_evaluate_model(
@@ -504,7 +571,7 @@ def train_and_evaluate_model(
     if resume and not latest_path.exists():
         raise FileNotFoundError(f"--resume requested but no checkpoint exists: {latest_path}")
     if resume:
-        checkpoint = torch.load(latest_path, map_location=device)
+        checkpoint = load_checkpoint(latest_path, device)
         validate_checkpoint_compatibility(checkpoint, cfg)
         encoder.load_state_dict(checkpoint["encoder"])
         head.load_state_dict(checkpoint["head"])
@@ -598,7 +665,7 @@ def train_and_evaluate_model(
 
     final_epoch = int(history[-1]["epoch"]) if history else int(start_epoch) - 1
     if stopped_for_nonfinite:
-        checkpoint = torch.load(model_dir / "best.pt", map_location=device)
+        checkpoint = load_checkpoint(model_dir / "best.pt", device)
         encoder.load_state_dict(checkpoint["encoder"])
         head.load_state_dict(checkpoint["head"])
     save_checkpoint_atomic(
@@ -616,7 +683,7 @@ def train_and_evaluate_model(
             trainable_parameters=trainable_parameters,
         ),
     )
-    checkpoint = torch.load(model_dir / "best.pt", map_location=device)
+    checkpoint = load_checkpoint(model_dir / "best.pt", device)
     encoder.load_state_dict(checkpoint["encoder"])
     head.load_state_dict(checkpoint["head"])
     split_metrics = {}
@@ -762,6 +829,13 @@ def save_checkpoint_atomic(path: Path, payload: dict[str, Any]) -> None:
     tmp_path = path.with_name(f"{path.name}.tmp.{os.getpid()}")
     torch.save(payload, tmp_path)
     os.replace(tmp_path, path)
+
+
+def load_checkpoint(path: Path, device: torch.device) -> dict[str, Any]:
+    try:
+        return torch.load(path, map_location=device, weights_only=False)
+    except TypeError:
+        return torch.load(path, map_location=device)
 
 
 def finite_epoch_outputs(train_loss: float, val_loss: float, val_scores: list[float]) -> bool:

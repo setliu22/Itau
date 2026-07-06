@@ -1,0 +1,18 @@
+{
+  "background": "black",
+  "best_epoch": -1,
+  "best_val_auc": NaN,
+  "encoder_type": "conv1d",
+  "error": "ValueError('Caught ValueError in DataLoader worker process 3.\\nOriginal Traceback (most recent call last):\\n  File \"/home/setliu22/.conda/envs/itau/lib/python3.11/site-packages/torch/utils/data/_utils/worker.py\", line 349, in _worker_loop\\n    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]\\n           ^^^^^^^^^^^^^^^^^^^^\\n  File \"/home/setliu22/.conda/envs/itau/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py\", line 52, in fetch\\n    data = [self.dataset[idx] for idx in possibly_batched_index]\\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/home/setliu22/.conda/envs/itau/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py\", line 52, in <listcomp>\\n    data = [self.dataset[idx] for idx in possibly_batched_index]\\n            ~~~~~~~~~~~~^^^^^\\n  File \"/orcd/home/002/setliu22/fine-grained-homoglyph-detection/training/dataset.py\", line 80, in __getitem__\\n    process(name_a),\\n    ^^^^^^^^^^^^^^^\\n  File \"/orcd/home/002/setliu22/fine-grained-homoglyph-detection/training/dataset.py\", line 70, in process\\n    slices = slice_image(\\n             ^^^^^^^^^^^^\\n  File \"/orcd/home/002/setliu22/fine-grained-homoglyph-detection/rendering/slicer.py\", line 53, in slice_image\\n    return np.stack(slices, axis=0)\\n           ^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/home/setliu22/.conda/envs/itau/lib/python3.11/site-packages/numpy/core/shape_base.py\", line 445, in stack\\n    raise ValueError(\\'need at least one array to stack\\')\\nValueError: need at least one array to stack\\n')",
+  "max_batches": null,
+  "max_samples": null,
+  "num_epochs": 5,
+  "pad_to_width": null,
+  "pooling": "attention",
+  "remove_padding": true,
+  "run_name": "conv1d__sweep__attention__pad__black__sw6__st3",
+  "slice_width": 6,
+  "status": "failed",
+  "stride": 3,
+  "total_seconds": 2.227842330932617
+}

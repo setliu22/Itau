@@ -1,0 +1,851 @@
+{
+  "current_reference": {
+    "conv1d": {
+      "background": "black",
+      "pad_to_width": null,
+      "pooling": "mean",
+      "remove_padding": false,
+      "slice_width": 6,
+      "stride": 6
+    },
+    "transformer": {
+      "background": "black",
+      "pad_to_width": null,
+      "pooling": "attention",
+      "remove_padding": false,
+      "slice_width": 6,
+      "stride": 6
+    }
+  },
+  "encoder_types": [
+    "conv1d"
+  ],
+  "grid": [
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 3,
+        "stride": 1
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 3,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 4,
+        "stride": 2
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 4,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 6,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 6,
+        "stride": 6
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 8,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 8,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 16,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 16,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 32,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 32,
+        "stride": 32
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 3,
+        "stride": 1
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 3,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 4,
+        "stride": 2
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 4,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 6,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 6,
+        "stride": 6
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 8,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 8,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 16,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 16,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 32,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 32,
+        "stride": 32
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 3,
+        "stride": 1
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 3,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 4,
+        "stride": 2
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 4,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 6,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 6,
+        "stride": 6
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 8,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 8,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 16,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 16,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 32,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": true,
+        "slice_width": 32,
+        "stride": 32
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 3,
+        "stride": 1
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 3,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 4,
+        "stride": 2
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 4,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 6,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 6,
+        "stride": 6
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 8,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 8,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 16,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 16,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 32,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "max",
+        "remove_padding": false,
+        "slice_width": 32,
+        "stride": 32
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 3,
+        "stride": 1
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 3,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 4,
+        "stride": 2
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 4,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 6,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 6,
+        "stride": 6
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 8,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 8,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 16,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 16,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 32,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": true,
+        "slice_width": 32,
+        "stride": 32
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 3,
+        "stride": 1
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 3,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 4,
+        "stride": 2
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 4,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 6,
+        "stride": 3
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 6,
+        "stride": 6
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 8,
+        "stride": 4
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 8,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 16,
+        "stride": 8
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 16,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 32,
+        "stride": 16
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": null,
+        "pooling": "attention",
+        "remove_padding": false,
+        "slice_width": 32,
+        "stride": 32
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": 320,
+        "pooling": "mean",
+        "remove_padding": true,
+        "slice_width": 320,
+        "stride": 320
+      },
+      "encoder_type": "conv1d"
+    },
+    {
+      "combo": {
+        "background": "black",
+        "pad_to_width": 320,
+        "pooling": "mean",
+        "remove_padding": false,
+        "slice_width": 320,
+        "stride": 320
+      },
+      "encoder_type": "conv1d"
+    }
+  ],
+  "important_scope_note": "The older strip_design_sweep.py fixed encoder_type='conv1d' and swept pooling, remove_padding, background, slice_width, stride, and whole-image padding. Transformer runs here reuse the same strip grid only; transformer internal knobs such as heads/layers/feedforward/dropout were not in the older sweep space.",
+  "inputs": {
+    "train": "generated_datasets/mix65/train.parquet",
+    "validation": "generated_datasets/mix65/validation.parquet"
+  },
+  "max_batches": null,
+  "max_samples": null,
+  "num_planned_runs": 74,
+  "purpose": "Re-run the older strip-design sweep space on mix65 data.",
+  "sweep_epochs": 5,
+  "validation_only_split": false,
+  "validation_split_seed": 7
+}

@@ -1,0 +1,144 @@
+{
+  "artifacts": {
+    "best_checkpoint": "model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/best.pt",
+    "config": "model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/config.yaml",
+    "final_checkpoint": "model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/final.pt",
+    "latest_checkpoint": "model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/latest.pt",
+    "log": "model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/log.csv",
+    "training_curves": "model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/training_curves.png"
+  },
+  "average_epoch_seconds": 154.21047043800354,
+  "best_epoch": 5,
+  "best_val_auc": 0.9997842896094637,
+  "config": {
+    "data": {
+      "test_pkl": "model_results/mix65_sweep_best_strip_32_16_mean/pkl_splits/test.pkl",
+      "train_pkl": "model_results/mix65_sweep_best_strip_32_16_mean/pkl_splits/train.pkl",
+      "val_pkl": "model_results/mix65_sweep_best_strip_32_16_mean/pkl_splits/validation.pkl"
+    },
+    "model": {
+      "dropout": 0.0,
+      "embed_dim": 128,
+      "encoder_type": "conv1d",
+      "interaction_channels": "cosine",
+      "interaction_classifier_hidden": 64,
+      "interaction_hidden_channels": 32,
+      "pair_head": "interaction_cnn",
+      "pooling": "mean"
+    },
+    "rendering": {
+      "background": "black",
+      "height": 32
+    },
+    "run_name": "conv1d_interaction_cnn_cosine",
+    "slicing": {
+      "pad_to_width": null,
+      "remove_padding": false,
+      "slice_width": 32,
+      "stride": 16
+    },
+    "training": {
+      "batch_size": 64,
+      "lr": 0.001,
+      "num_epochs": 20,
+      "num_workers": 4,
+      "seed": 7
+    }
+  },
+  "elapsed_seconds": 3278.4484391212463,
+  "run_name": "conv1d_interaction_cnn_cosine",
+  "split_metrics": {
+    "test": {
+      "avg_precision": 0.9997507671626931,
+      "best_threshold": {
+        "accuracy": 0.9975280863885148,
+        "f1": 0.9980779999091969,
+        "fn": 266,
+        "fp": 369,
+        "mcc": 0.994615757462405,
+        "precision": 0.9977669385877853,
+        "recall": 0.9983892552424898,
+        "specificity": 0.9959779824513597,
+        "threshold": 0.5463153123855591,
+        "tn": 91376,
+        "tp": 164875
+      },
+      "fixed_threshold": {
+        "accuracy": 0.9974541236190373,
+        "f1": 0.998020808744757,
+        "fn": 249,
+        "fp": 405,
+        "mcc": 0.9944544215370746,
+        "precision": 0.9975498647888347,
+        "recall": 0.9984921975766163,
+        "specificity": 0.9955855904953949,
+        "threshold": 0.5,
+        "tn": 91340,
+        "tp": 164892
+      },
+      "roc_auc": 0.9996996815239418
+    },
+    "train": {
+      "avg_precision": 0.9999557484356125,
+      "best_threshold": {
+        "accuracy": 0.9991548187624087,
+        "f1": 0.9993426216249597,
+        "fn": 427,
+        "fp": 398,
+        "mcc": 0.9981594191964634,
+        "precision": 0.9993657148139058,
+        "recall": 0.9993195295032565,
+        "specificity": 0.9988583394288829,
+        "threshold": 0.7595074772834778,
+        "tn": 348217,
+        "tp": 627080
+      },
+      "fixed_threshold": {
+        "accuracy": 0.9989878314391029,
+        "f1": 0.9992131013840814,
+        "fn": 220,
+        "fp": 768,
+        "mcc": 0.9977956978046278,
+        "precision": 0.9987771771580515,
+        "recall": 0.9996494063014436,
+        "specificity": 0.9977969966868896,
+        "threshold": 0.5,
+        "tn": 347847,
+        "tp": 627287
+      },
+      "roc_auc": 0.9999390288881362
+    },
+    "validation": {
+      "avg_precision": 0.9998643144292847,
+      "best_threshold": {
+        "accuracy": 0.9976997699769977,
+        "f1": 0.998211091234347,
+        "fn": 11,
+        "fp": 12,
+        "mcc": 0.9949902774740427,
+        "precision": 0.998133457769482,
+        "recall": 0.9982887367766023,
+        "specificity": 0.9966395967516102,
+        "threshold": 0.8124769926071167,
+        "tn": 3559,
+        "tp": 6417
+      },
+      "fixed_threshold": {
+        "accuracy": 0.9968996899689969,
+        "f1": 0.9975922330097088,
+        "fn": 6,
+        "fp": 25,
+        "mcc": 0.993248685627724,
+        "precision": 0.9961222273925857,
+        "recall": 0.9990665836963286,
+        "specificity": 0.9929991598991879,
+        "threshold": 0.5,
+        "tn": 3546,
+        "tp": 6422
+      },
+      "roc_auc": 0.9997842896094637
+    }
+  },
+  "total_epochs_completed": 20,
+  "trainable_parameter_count": 454497
+}

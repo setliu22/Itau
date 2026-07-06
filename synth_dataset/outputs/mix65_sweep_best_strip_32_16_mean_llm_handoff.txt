@@ -1,0 +1,69 @@
+Prompt for the next LLM:
+
+Use the GitHub repository at github.com/setliu22/Itau and inspect the
+synth_dataset directory. Update the paper/result metrics for the newest mix65
+model runs that use the corrected full-train sweep parameters:
+
+- slice_width = 32
+- stride = 16
+- remove_padding = false
+- pad_to_width = null
+- background = black
+- pooling = mean
+
+Primary result directory:
+
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/
+
+Read these files first:
+
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/model_comparison.csv
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/model_comparison.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/model_run_manifest.json
+
+Then read each model's metrics.json and log.csv:
+
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_baseline/metrics.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_baseline/log.csv
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_bilstm/metrics.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_bilstm/log.csv
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_transformer/metrics.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_transformer/log.csv
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_single_cross_attention/metrics.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_single_cross_attention/log.csv
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_stacked_cross_attention/metrics.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_stacked_cross_attention/log.csv
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/metrics.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_interaction_cnn_cosine/log.csv
+
+Important run-status note:
+
+All six Slurm jobs completed with ExitCode 0:0. Five models completed all
+20 epochs. conv1d_single_cross_attention produced non-finite outputs at epoch 4,
+so the training script stopped and evaluated the best checkpoint from epoch 2.
+Its metrics are valid for the best checkpoint, but report that it only completed
+3 finite epochs.
+
+The corrected strip-parameter sweep evidence is here:
+
+  synth_dataset/model_results/mix65/full_train_strip_sweep_exact/summary.txt
+  synth_dataset/model_results/mix65/full_train_strip_sweep_exact/summary.json
+  synth_dataset/model_results/mix65/full_train_strip_sweep_exact/results.csv
+
+The sweep selected:
+
+  conv1d__sweep__mean__nopad__black__sw32__st16
+
+with validation ROC-AUC 0.9983921592681972. This replaced the previous
+incorrect validation-only/90:10-style recommendation:
+
+  conv1d__sweep__attention__nopad__black__sw16__st16
+
+with validation ROC-AUC 0.9738402359388546.
+
+Do not use the older result directory as the main result source:
+
+  synth_dataset/model_results/mix65/
+
+That directory contains previous 6/6 or 16/16 runs and older paper artifacts.
+Use it only for historical comparison if requested.

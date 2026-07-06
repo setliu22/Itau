@@ -1,0 +1,15 @@
+mix65 strip-parameter sweep summary
+
+Completed runs: 43
+Failed runs: 31
+
+conv1d
+  best: conv1d__sweep__mean__nopad__black__sw32__st16 val_auc=0.998392
+  current reference: conv1d__sweep__mean__nopad__black__sw6__st6 val_auc=0.540647 delta=+0.457745
+  recommendation: change parameters; best run improves validation ROC-AUC.
+  best pooling: mean (best_auc=0.998392, mean_auc=0.661241)
+  best remove_padding: False (best_auc=0.998392, mean_auc=0.663197)
+  best slice_width: 32 (best_auc=0.998392, mean_auc=0.825342)
+  best stride: 16 (best_auc=0.998392, mean_auc=0.797232)
+  best pad_to_width: None (best_auc=0.998392, mean_auc=0.649254)
+

@@ -1,4 +1,4 @@
-run_name: conv1d_stacked_cross_attention
+run_name: conv1d_transformer
 
 data:
   train_pkl: data/splits/train.pkl
@@ -16,14 +16,9 @@ slicing:
   pad_to_width: null
 
 model:
-  encoder_type: conv1d
+  encoder_type: transformer
   embed_dim: 128
   pooling: mean
-  pair_head: stacked_cross_attention
-  cross_attention_layers: 2
-  cross_attention_heads: 4
-  cross_attention_feedforward: 128
-  dropout: 0.0
 
 training:
   num_epochs: 20

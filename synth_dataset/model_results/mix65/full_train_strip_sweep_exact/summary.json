@@ -1,0 +1,378 @@
+{
+  "by_encoder": {
+    "conv1d": {
+      "best_minus_current_val_auc": 0.4577452250088304,
+      "best_run": {
+        "background": "black",
+        "best_epoch": 5,
+        "best_val_auc": 0.9983921592681972,
+        "encoder_type": "conv1d",
+        "error": NaN,
+        "max_batches": NaN,
+        "max_samples": NaN,
+        "num_epochs": 5,
+        "pad_to_width": NaN,
+        "pooling": "mean",
+        "remove_padding": false,
+        "run_name": "conv1d__sweep__mean__nopad__black__sw32__st16",
+        "slice_width": 32,
+        "status": "ok",
+        "stride": 16,
+        "total_seconds": 991.893006324768
+      },
+      "current_reference_run": {
+        "background": "black",
+        "best_epoch": 1,
+        "best_val_auc": 0.5406469342593668,
+        "encoder_type": "conv1d",
+        "error": NaN,
+        "max_batches": NaN,
+        "max_samples": NaN,
+        "num_epochs": 5,
+        "pad_to_width": NaN,
+        "pooling": "mean",
+        "remove_padding": false,
+        "run_name": "conv1d__sweep__mean__nopad__black__sw6__st6",
+        "slice_width": 6,
+        "status": "ok",
+        "stride": 6,
+        "total_seconds": 1015.8274731636049
+      },
+      "parameter_recommendations": {
+        "pad_to_width": [
+          {
+            "best_val_auc": 0.9983921592681972,
+            "mean_val_auc": 0.6492544093073281,
+            "runs": 41,
+            "value": "None"
+          },
+          {
+            "best_val_auc": 0.9981489813625176,
+            "mean_val_auc": 0.9979647791089006,
+            "runs": 2,
+            "value": 320.0
+          }
+        ],
+        "pooling": [
+          {
+            "best_val_auc": 0.9983921592681972,
+            "mean_val_auc": 0.6612412474795668,
+            "runs": 16,
+            "value": "mean"
+          },
+          {
+            "best_val_auc": 0.9978911439503416,
+            "mean_val_auc": 0.6308175976138916,
+            "runs": 14,
+            "value": "max"
+          },
+          {
+            "best_val_auc": 0.9972666663994704,
+            "mean_val_auc": 0.7080041548885152,
+            "runs": 13,
+            "value": "attention"
+          }
+        ],
+        "remove_padding": [
+          {
+            "best_val_auc": 0.9983921592681972,
+            "mean_val_auc": 0.6631967249331346,
+            "runs": 36,
+            "value": false
+          },
+          {
+            "best_val_auc": 0.9977805768552837,
+            "mean_val_auc": 0.6771826060322013,
+            "runs": 7,
+            "value": true
+          }
+        ],
+        "slice_width": [
+          {
+            "best_val_auc": 0.9983921592681972,
+            "mean_val_auc": 0.8253423630084727,
+            "runs": 6,
+            "value": 32
+          },
+          {
+            "best_val_auc": 0.9981489813625176,
+            "mean_val_auc": 0.9979647791089006,
+            "runs": 2,
+            "value": 320
+          },
+          {
+            "best_val_auc": 0.9972666663994704,
+            "mean_val_auc": 0.7351911974303128,
+            "runs": 6,
+            "value": 16
+          },
+          {
+            "best_val_auc": 0.9275079562129908,
+            "mean_val_auc": 0.5934291045645245,
+            "runs": 12,
+            "value": 3
+          },
+          {
+            "best_val_auc": 0.922876554147294,
+            "mean_val_auc": 0.5996510340419444,
+            "runs": 6,
+            "value": 8
+          },
+          {
+            "best_val_auc": 0.9140086200512078,
+            "mean_val_auc": 0.6301702358607862,
+            "runs": 5,
+            "value": 6
+          },
+          {
+            "best_val_auc": 0.6221869212980106,
+            "mean_val_auc": 0.5643871301063076,
+            "runs": 6,
+            "value": 4
+          }
+        ],
+        "stride": [
+          {
+            "best_val_auc": 0.9983921592681972,
+            "mean_val_auc": 0.7972320913108204,
+            "runs": 6,
+            "value": 16
+          },
+          {
+            "best_val_auc": 0.9981489813625176,
+            "mean_val_auc": 0.9979647791089006,
+            "runs": 2,
+            "value": 320
+          },
+          {
+            "best_val_auc": 0.9975539753009316,
+            "mean_val_auc": 0.7901993800342951,
+            "runs": 3,
+            "value": 32
+          },
+          {
+            "best_val_auc": 0.9955711300166226,
+            "mean_val_auc": 0.6471322570946638,
+            "runs": 6,
+            "value": 8
+          },
+          {
+            "best_val_auc": 0.9275079562129908,
+            "mean_val_auc": 0.646307773001349,
+            "runs": 9,
+            "value": 3
+          },
+          {
+            "best_val_auc": 0.922876554147294,
+            "mean_val_auc": 0.6003324433364694,
+            "runs": 6,
+            "value": 4
+          },
+          {
+            "best_val_auc": 0.6221869212980106,
+            "mean_val_auc": 0.5695504856558725,
+            "runs": 3,
+            "value": 2
+          },
+          {
+            "best_val_auc": 0.6184913315920251,
+            "mean_val_auc": 0.5608165310266603,
+            "runs": 6,
+            "value": 1
+          },
+          {
+            "best_val_auc": 0.5496843566467553,
+            "mean_val_auc": 0.5451656454530611,
+            "runs": 2,
+            "value": 6
+          }
+        ]
+      },
+      "top_10": [
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.9983921592681972,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "mean",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__mean__nopad__black__sw32__st16",
+          "slice_width": 32,
+          "status": "ok",
+          "stride": 16,
+          "total_seconds": 991.893006324768
+        },
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.9981489813625176,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": 320.0,
+          "pooling": "mean",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__whole__nopad__black",
+          "slice_width": 320,
+          "status": "ok",
+          "stride": 320,
+          "total_seconds": 998.4038696289062
+        },
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.9978911439503416,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "max",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__max__nopad__black__sw32__st16",
+          "slice_width": 32,
+          "status": "ok",
+          "stride": 16,
+          "total_seconds": 1028.073767900467
+        },
+        {
+          "background": "black",
+          "best_epoch": 4,
+          "best_val_auc": 0.9977805768552837,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": 320.0,
+          "pooling": "mean",
+          "remove_padding": true,
+          "run_name": "conv1d__sweep__whole__pad__black",
+          "slice_width": 320,
+          "status": "ok",
+          "stride": 320,
+          "total_seconds": 1074.8321318626404
+        },
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.9975539753009316,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "max",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__max__nopad__black__sw32__st32",
+          "slice_width": 32,
+          "status": "ok",
+          "stride": 32,
+          "total_seconds": 1017.735950231552
+        },
+        {
+          "background": "black",
+          "best_epoch": 4,
+          "best_val_auc": 0.9972666663994704,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "attention",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__attention__nopad__black__sw16__st16",
+          "slice_width": 16,
+          "status": "ok",
+          "stride": 16,
+          "total_seconds": 978.2192566394806
+        },
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.9972464959640832,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "mean",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__mean__nopad__black__sw32__st32",
+          "slice_width": 32,
+          "status": "ok",
+          "stride": 32,
+          "total_seconds": 966.2133674621582
+        },
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.9955711300166226,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "attention",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__attention__nopad__black__sw16__st8",
+          "slice_width": 16,
+          "status": "ok",
+          "stride": 8,
+          "total_seconds": 1034.4750168323517
+        },
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.9275079562129908,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "attention",
+          "remove_padding": true,
+          "run_name": "conv1d__sweep__attention__pad__black__sw3__st3",
+          "slice_width": 3,
+          "status": "ok",
+          "stride": 3,
+          "total_seconds": 1123.4990859031675
+        },
+        {
+          "background": "black",
+          "best_epoch": 5,
+          "best_val_auc": 0.922876554147294,
+          "encoder_type": "conv1d",
+          "error": NaN,
+          "max_batches": NaN,
+          "max_samples": NaN,
+          "num_epochs": 5,
+          "pad_to_width": NaN,
+          "pooling": "attention",
+          "remove_padding": false,
+          "run_name": "conv1d__sweep__attention__nopad__black__sw8__st4",
+          "slice_width": 8,
+          "status": "ok",
+          "stride": 4,
+          "total_seconds": 1071.806025981903
+        }
+      ]
+    }
+  },
+  "completed_runs": 43,
+  "failed_runs": 31,
+  "scope_note": "Recommendations are limited to the old strip-design sweep space. Transformer internal parameters were not swept by the older repo."
+}
