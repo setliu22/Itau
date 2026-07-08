@@ -18,6 +18,8 @@ CONDA_PREFIX=/home/setliu22/.conda/envs/itau
 MODEL_KEY="${MODEL_KEY:-}"
 RESUME="${RESUME:-0}"
 OUTPUT_DIR="${OUTPUT_DIR:-model_results/mix65_sweep_best_strip_32_16_mean}"
+SPLIT_PKL="${SPLIT_PKL:-}"
+USE_ORIGINAL_HPARAMS="${USE_ORIGINAL_HPARAMS:-0}"
 mkdir -p outputs/slurm_logs_archive "$OUTPUT_DIR" .cache/matplotlib
 
 if [[ "${SLURM_RESTART_COUNT:-0}" != "0" ]]; then
@@ -63,10 +65,21 @@ if [[ "$RESUME" == "1" ]]; then
   EXTRA_ARGS+=(--resume)
 fi
 
+DATA_ARGS=()
+if [[ -n "$SPLIT_PKL" ]]; then
+  DATA_ARGS+=(--split-pkl "$SPLIT_PKL")
+else
+  DATA_ARGS+=(--train generated_datasets/mix65/train.parquet)
+  DATA_ARGS+=(--test generated_datasets/mix65/test.parquet)
+  DATA_ARGS+=(--validation generated_datasets/mix65/validation.parquet)
+fi
+
+if [[ "$USE_ORIGINAL_HPARAMS" == "1" ]]; then
+  EXTRA_ARGS+=(--use-original-hparams)
+fi
+
 "$PYTHON" scripts/train_large_dataset_models.py \
-  --train generated_datasets/mix65/train.parquet \
-  --test generated_datasets/mix65/test.parquet \
-  --validation generated_datasets/mix65/validation.parquet \
+  "${DATA_ARGS[@]}" \
   --output-dir "$OUTPUT_DIR" \
   --external-repo /home/setliu22/fine-grained-homoglyph-detection \
   --device cuda \

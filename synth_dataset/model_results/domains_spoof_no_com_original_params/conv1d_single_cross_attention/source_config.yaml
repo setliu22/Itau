@@ -1,0 +1,32 @@
+run_name: conv1d_single_cross_attention
+
+data:
+  train_pkl: data/splits/train.pkl
+  val_pkl: data/splits/val.pkl
+  test_pkl: data/splits/test.pkl
+
+rendering:
+  height: 32
+  background: black
+
+slicing:
+  slice_width: 32
+  stride: 16
+  remove_padding: false
+  pad_to_width: null
+
+model:
+  encoder_type: conv1d
+  embed_dim: 128
+  pooling: mean
+  pair_head: single_cross_attention
+  cross_attention_heads: 4
+  classifier_hidden: 128
+  dropout: 0.0
+
+training:
+  num_epochs: 20
+  batch_size: 64
+  lr: 3.0e-4
+  num_workers: 4
+  seed: 7

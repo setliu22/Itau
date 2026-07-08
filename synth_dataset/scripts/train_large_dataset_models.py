@@ -66,11 +66,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train", type=Path, default=Path("generated_datasets/mix65/train.parquet"))
     parser.add_argument("--test", type=Path, default=Path("generated_datasets/mix65/test.parquet"))
     parser.add_argument("--validation", type=Path, default=Path("generated_datasets/mix65/validation.parquet"))
+    parser.add_argument(
+        "--split-pkl",
+        type=Path,
+        default=None,
+        help="Pickle containing train/test/validate split lists in (fraudulent_name, real_name, label) format.",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("model_results/mix65"))
     parser.add_argument("--models", nargs="+", choices=sorted(MODEL_CONFIGS), default=DEFAULT_MODEL_KEYS)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--resume", action="store_true", help="Resume each requested model from latest.pt when present.")
+    parser.add_argument(
+        "--use-original-hparams",
+        action="store_true",
+        help="Force the original 32-pixel-high, 6-pixel-wide non-overlap slicing setup and lr=1e-3.",
+    )
     return parser.parse_args()
 
 
@@ -88,7 +99,7 @@ def main() -> int:
     from training.train import build_model, run_epoch, set_seed
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    pkl_paths = convert_parquets_to_pickles(args)
+    pkl_paths = prepare_pickle_splits(args)
     device = choose_device(args.device)
 
     manifest = {
@@ -98,6 +109,8 @@ def main() -> int:
             "train": str(args.train),
             "test": str(args.test),
             "validation": str(args.validation),
+            "split_pkl": str(args.split_pkl) if args.split_pkl else None,
+            "use_original_hparams": bool(args.use_original_hparams),
         },
         "pickle_paths": {key: str(path) for key, path in pkl_paths.items()},
         "device": str(device),
@@ -121,6 +134,8 @@ def main() -> int:
         cfg["data"]["test_pkl"] = str(pkl_paths["test"])
         if args.num_workers is not None:
             cfg["training"]["num_workers"] = int(args.num_workers)
+        if args.use_original_hparams:
+            apply_original_hparams(cfg)
 
         save_yaml(cfg, model_dir / "config.yaml")
         shutil.copy(source_config_path, model_dir / "source_config.yaml")
@@ -444,6 +459,78 @@ def build_model_for_config(
             dropout=float(model_cfg.get("dropout", 0.0)),
         ).to(device)
     return encoder, head, True
+
+
+def apply_original_hparams(cfg: dict[str, Any]) -> None:
+    cfg["slicing"]["slice_width"] = 6
+    cfg["slicing"]["stride"] = 6
+    cfg["slicing"]["remove_padding"] = False
+    cfg["slicing"]["pad_to_width"] = None
+    cfg["training"]["lr"] = 1.0e-3
+
+
+def prepare_pickle_splits(args: argparse.Namespace) -> dict[str, Path]:
+    if args.split_pkl is not None:
+        return convert_split_pickle_to_pickles(args)
+    return convert_parquets_to_pickles(args)
+
+
+def convert_split_pickle_to_pickles(args: argparse.Namespace) -> dict[str, Path]:
+    output_dir = args.output_dir / "pkl_splits"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    source = args.split_pkl
+    if source is None:
+        raise ValueError("--split-pkl was not provided")
+    split_keys = {"train": "train", "test": "test", "validation": "validate"}
+    paths = {}
+    for split, source_key in split_keys.items():
+        path = output_dir / f"{split}.pkl"
+        if is_valid_pickle(path):
+            paths[split] = path
+            continue
+        lock_path = output_dir / f"{split}.lock"
+        with file_lock(lock_path):
+            if is_valid_pickle(path):
+                paths[split] = path
+                continue
+            payload = load_split_pickle_payload(source)
+            if source_key not in payload:
+                raise ValueError(f"{source} missing split key {source_key!r}")
+            rows = normalize_split_rows(payload[source_key], source, source_key)
+            write_pickle_atomic(rows, path)
+        paths[split] = path
+    return paths
+
+
+def load_split_pickle_payload(source: Path) -> dict[str, Any]:
+    with source.open("rb") as handle:
+        payload = pickle.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{source} must contain a split dictionary")
+    return payload
+
+
+def normalize_split_rows(rows: Any, source: Path, split_key: str) -> list[tuple[str, str, int]]:
+    normalized = []
+    for idx, row in enumerate(rows):
+        try:
+            fraudulent_name, real_name, label = row[:3]
+        except Exception as exc:
+            raise ValueError(
+                f"{source} split {split_key!r} row {idx} must contain "
+                "(fraudulent_name, real_name, label)"
+            ) from exc
+        normalized.append((str(fraudulent_name), str(real_name), int(float(label))))
+    if not normalized:
+        raise ValueError(f"{source} split {split_key!r} is empty")
+    return normalized
+
+
+def write_pickle_atomic(rows: list[tuple[str, str, int]], pickle_path: Path) -> None:
+    with tempfile.NamedTemporaryFile(dir=pickle_path.parent, delete=False) as handle:
+        tmp_path = Path(handle.name)
+        pickle.dump(rows, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    tmp_path.replace(pickle_path)
 
 
 def convert_parquets_to_pickles(args: argparse.Namespace) -> dict[str, Path]:
@@ -1090,6 +1177,36 @@ def write_model_comparison(output_dir: Path) -> None:
     frame = pd.DataFrame(rows).sort_values("run_name")
     frame.to_csv(output_dir / "model_comparison.csv", index=False)
     frame.to_json(output_dir / "model_comparison.json", orient="records", indent=2)
+    write_model_comparison_text(frame, output_dir / "model_comparison.txt")
+
+
+def write_model_comparison_text(frame: pd.DataFrame, output_path: Path) -> None:
+    columns = [
+        "run_name",
+        "best_val_auc",
+        "test_roc_auc",
+        "test_accuracy_0_5",
+        "test_precision_0_5",
+        "test_recall_0_5",
+        "test_f1_0_5",
+        "test_mcc_0_5",
+        "train_roc_auc",
+        "validation_roc_auc",
+        "trainable_parameter_count",
+        "average_epoch_seconds",
+        "best_epoch",
+        "total_epochs_completed",
+        "elapsed_seconds",
+        "metrics_path",
+    ]
+    available = [column for column in columns if column in frame.columns]
+    lines = [
+        "Model comparison summary",
+        f"Output directory: {output_path.parent}",
+        "",
+        frame[available].to_string(index=False),
+    ]
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
