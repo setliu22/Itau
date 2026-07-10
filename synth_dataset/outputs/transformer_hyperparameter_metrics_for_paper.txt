@@ -1,0 +1,54 @@
+Transformer hyperparameter sensitivity note for paper updates
+============================================================
+
+Purpose
+-------
+Use this file to update paper tables/captions without hunting through scratch
+outputs. The referenced result artifacts are committed with this file.
+
+Newer/tuned transformer run
+---------------------------
+Path:
+  synth_dataset/model_results/mix65_tuned_strip_v2/conv1d_transformer/metrics.json
+  synth_dataset/model_results/mix65_tuned_strip_v2/model_comparison.csv
+
+Configuration:
+  encoder_type = transformer
+  slice_width = 16
+  stride = 16
+  pooling = attention
+  seed = 7
+
+Metrics:
+  best validation ROC-AUC = 0.9962861567
+  test ROC-AUC = 0.9966894462
+  accuracy = 0.9810110321
+  precision = 0.9778407227
+  recall = 0.9929635887
+  F1 = 0.9853441334
+  MCC = 0.9586163646
+
+Earlier transformer comparison run
+----------------------------------
+Path:
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/conv1d_transformer/metrics.json
+  synth_dataset/model_results/mix65_sweep_best_strip_32_16_mean/model_comparison.csv
+
+Configuration:
+  encoder_type = transformer
+  slice_width = 32
+  stride = 16
+  pooling = mean
+  seed = 7
+
+Metrics:
+  best validation ROC-AUC = 0.8538248112
+  test ROC-AUC = 0.8125306833
+
+Suggested paper note
+--------------------
+Future experiments should perform model-specific hyperparameter tuning for each
+architecture, since the transformer results are sensitive to slicing and pooling:
+the 32/16/mean configuration achieved validation ROC-AUC 0.8538, while the
+16/16/attention configuration achieved validation ROC-AUC 0.9963.
+
