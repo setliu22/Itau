@@ -1,0 +1,28 @@
+run_name: conv1d_transformer
+
+data:
+  train_pkl: data/splits/train.pkl
+  val_pkl: data/splits/val.pkl
+  test_pkl: data/splits/test.pkl
+
+rendering:
+  height: 32
+  background: black
+
+slicing:
+  slice_width: 16
+  stride: 16
+  remove_padding: false
+  pad_to_width: null
+
+model:
+  encoder_type: transformer
+  embed_dim: 128
+  pooling: attention
+
+training:
+  num_epochs: 20
+  batch_size: 64
+  lr: 1.0e-3
+  num_workers: 4
+  seed: 7
