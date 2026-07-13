@@ -496,12 +496,12 @@ def plot_cross_attention_contrast(
             )
         contrasts.append((title, changed_matrix - unchanged_matrix, query_image, key_image))
 
-    limit = max(float(np.abs(matrix).max()) for _, matrix, _, _ in contrasts)
+    limits = [float(np.abs(matrix).max()) for _, matrix, _, _ in contrasts]
     figure = plt.figure(figsize=(7.2, 3.15))
     outer = figure.add_gridspec(
-        1, 2, wspace=0.30, left=0.06, right=0.90, top=0.90, bottom=0.16
+        1, 2, wspace=0.38, left=0.06, right=0.88, top=0.90, bottom=0.16
     )
-    image = None
+    images = []
     for index, (title, matrix, query_image, key_image) in enumerate(contrasts):
         image = add_map_panel(
             figure,
@@ -511,16 +511,18 @@ def plot_cross_attention_contrast(
             key_image,
             f"({chr(97 + index)}) {title}",
             cmap="RdBu_r",
-            vmin=-limit,
-            vmax=limit,
+            vmin=-limits[index],
+            vmax=limits[index],
             x_label="Key slice",
             y_label="Query slice",
         )
-    assert image is not None
-    color_axis = figure.add_axes((0.925, 0.22, 0.012, 0.56))
-    colorbar = figure.colorbar(image, cax=color_axis)
-    colorbar.set_label("Δ attention", fontsize=7)
-    colorbar.ax.tick_params(labelsize=6, length=2)
+        images.append(image)
+    color_positions = (0.465, 0.91)
+    for image, position in zip(images, color_positions):
+        color_axis = figure.add_axes((position, 0.22, 0.010, 0.56))
+        colorbar = figure.colorbar(image, cax=color_axis)
+        colorbar.ax.set_title("ΔA", fontsize=6.5, pad=3)
+        colorbar.ax.tick_params(labelsize=5.5, length=2)
     for suffix in ("png", "pdf"):
         figure.savefig(output_dir / f"cross_attention_substitution_contrast.{suffix}", dpi=300)
     plt.close(figure)
@@ -531,7 +533,8 @@ def plot_cross_attention_contrast(
         "definition": "attention(variant, real) - attention(real, real)",
         "block": 1,
         "directions": [title for title, _, _, _ in contrasts],
-        "symmetric_color_limit": limit,
+        "independent_symmetric_color_limits": limits,
+        "scale_note": "Each direction uses its own zero-centered symmetric color scale.",
     }
 
 
@@ -625,7 +628,9 @@ def main() -> int:
         "Figure: Substitution-induced cross-attention change. Each Block 1 map shows the "
         "attention weights for the OCR-confusable pair minus the corresponding no-change "
         "attention weights. Subtracting the matched baseline suppresses static boundary "
-        "attention and isolates changes associated with the substituted glyph.\n",
+        "attention and isolates changes associated with the substituted glyph. Each direction "
+        "uses an independent zero-centered symmetric color scale; color magnitude must "
+        "therefore be interpreted within, not between, panels.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)
