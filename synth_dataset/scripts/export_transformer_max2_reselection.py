@@ -29,6 +29,10 @@ def main() -> int:
             / "trials_export.csv"
         )
         base = pd.read_csv(base_path)
+        # The v3 rerun replaces the regular Transformer search. Retaining the
+        # older 1--3-layer Transformer rows would allow an invalid three-layer
+        # candidate to win after the requested two-layer cap.
+        base = base.loc[base["architecture"].ne("transformer")].copy()
         rerun = pd.read_csv(rerun_path)
         merged = pd.concat([base, rerun], ignore_index=True, sort=False)
         merged.to_csv(
