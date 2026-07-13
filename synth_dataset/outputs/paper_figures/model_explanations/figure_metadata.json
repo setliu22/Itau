@@ -424,16 +424,38 @@
         -0.238234743475914,
         0.7008827328681946
       ],
+      "before_centered_range": [
+        -0.36823761463165283,
+        0.8937405943870544
+      ],
+      "after_centered_range": [
+        -0.34806036949157715,
+        0.6207046508789062
+      ],
       "change_range": [
-        -0.75529545545578,
-        0.2256864756345749
+        -0.5710441470146179,
+        0.3983491063117981
+      ],
+      "changed_variant_key_slices": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "highlighted_variant_key_span": [
+        4,
+        11
       ],
       "shared_similarity_scale": [
-        -1.0,
-        1.0
+        -0.8937405943870544,
+        0.8937405943870544
       ],
-      "symmetric_change_limit": 0.75529545545578,
-      "definition": "cosine(after_block_1) - cosine(before_cross_attention)"
+      "symmetric_change_limit": 0.5710441470146179,
+      "definition": "row_centered_cosine(after_block_1) - row_centered_cosine(before_cross_attention)"
     }
   }
 }

@@ -210,6 +210,7 @@ def add_map_panel(
     vmax: float,
     x_label: str,
     y_label: str,
+    highlight_columns: tuple[int, int] | None = None,
 ) -> Any:
     grid = slot.subgridspec(
         2, 2, width_ratios=(1.15, 7.0), height_ratios=(1.15, 7.0), wspace=0.03, hspace=0.03
@@ -248,6 +249,16 @@ def add_map_panel(
     )
     heat.set_xlabel(x_label, fontsize=6.5, labelpad=2)
     heat.tick_params(labelsize=6.5, length=2)
+    if highlight_columns is not None:
+        start, end = highlight_columns
+        heat.axvspan(
+            start - 0.5,
+            end + 0.5,
+            facecolor="none",
+            edgecolor="black",
+            linewidth=1.0,
+            linestyle="--",
+        )
     return image
 
 
@@ -563,24 +574,50 @@ def plot_cross_attention_contextual_similarity(
             pair.mask_b,
         )
     after = pairwise_cosine(contextual_b, contextual_a)
-    change = after - before
+    # Remove each query's mean compatibility. Raw cosine values undergo a
+    # broad shift after LayerNorm and the FFN, which obscures changes in the
+    # relative key-alignment pattern that cross-attention actually consumes.
+    before_centered = before - before.mean(axis=1, keepdims=True)
+    after_centered = after - after.mean(axis=1, keepdims=True)
+    change = after_centered - before_centered
 
-    shared_min = float(min(before.min(), after.min()))
-    shared_max = float(max(before.max(), after.max()))
-    if shared_min < 0.0:
-        similarity_limit = max(abs(shared_min), abs(shared_max))
-        similarity_cmap = "RdBu_r"
-        similarity_vmin = -similarity_limit
-        similarity_vmax = similarity_limit
-    else:
-        similarity_cmap = "Reds"
-        similarity_vmin = 0.0
-        similarity_vmax = 1.0
+    similarity_limit = float(
+        max(np.abs(before_centered).max(), np.abs(after_centered).max())
+    )
+    similarity_cmap = "RdBu_r"
+    similarity_vmin = -similarity_limit
+    similarity_vmax = similarity_limit
     change_limit = float(np.abs(change).max())
 
+    real_slices, _ = render_slices(real, config)
+    if real_slices.shape != pair.slices_a.shape:
+        raise ValueError(
+            "Changed-slice highlighting requires equal real and variant slice shapes; got "
+            f"{tuple(real_slices.shape)} and {pair.slices_a.shape}"
+        )
+    pixel_change = np.mean(
+        np.abs(pair.slices_a - real_slices.numpy()), axis=(1, 2)
+    )
+    changed_indices = np.flatnonzero(pixel_change > 1e-6)
+    if not changed_indices.size:
+        raise ValueError("No changed rendered slices found for contextual similarity figure")
+    changed_span = (int(changed_indices.min()), int(changed_indices.max()))
+
     panels = (
-        ("(a) Before cross-attention", before, similarity_cmap, similarity_vmin, similarity_vmax),
-        ("(b) After Block 1", after, similarity_cmap, similarity_vmin, similarity_vmax),
+        (
+            "(a) Before cross-attention",
+            before_centered,
+            similarity_cmap,
+            similarity_vmin,
+            similarity_vmax,
+        ),
+        (
+            "(b) After Block 1",
+            after_centered,
+            similarity_cmap,
+            similarity_vmin,
+            similarity_vmax,
+        ),
         ("(c) Contextual change", change, "RdBu_r", -change_limit, change_limit),
     )
     figure = plt.figure(figsize=(7.2, 3.05))
@@ -602,6 +639,7 @@ def plot_cross_attention_contextual_similarity(
                 vmax=vmax,
                 x_label="Variant key slice",
                 y_label="Real query slice",
+                highlight_columns=changed_span,
             )
         )
     similarity_axis = figure.add_axes((0.875, 0.22, 0.010, 0.56))
@@ -621,10 +659,23 @@ def plot_cross_attention_contextual_similarity(
         "direction": "real_query_to_variant_key",
         "before_range": [float(before.min()), float(before.max())],
         "after_range": [float(after.min()), float(after.max())],
+        "before_centered_range": [
+            float(before_centered.min()),
+            float(before_centered.max()),
+        ],
+        "after_centered_range": [
+            float(after_centered.min()),
+            float(after_centered.max()),
+        ],
         "change_range": [float(change.min()), float(change.max())],
+        "changed_variant_key_slices": changed_indices.tolist(),
+        "highlighted_variant_key_span": list(changed_span),
         "shared_similarity_scale": [similarity_vmin, similarity_vmax],
         "symmetric_change_limit": change_limit,
-        "definition": "cosine(after_block_1) - cosine(before_cross_attention)",
+        "definition": (
+            "row_centered_cosine(after_block_1) - "
+            "row_centered_cosine(before_cross_attention)"
+        ),
     }
 
 
@@ -729,11 +780,14 @@ def main() -> int:
         "weights. Subtracting the matched baseline suppresses static boundary attention and "
         "isolates changes associated with the substituted glyph. Red denotes increased and "
         "blue denotes decreased attention relative to the no-change pair.\n\n"
-        "Figure: Cross-attention contextualization of pairwise slice similarity. Pairwise "
-        "cosine similarity between real-name query slices and variant key slices is shown "
-        "before cross-attention, after the first complete cross-attention and feed-forward "
-        "block, and as the signed post-minus-pre difference. The first two panels share a "
-        "similarity scale; the difference panel uses a separate zero-centered scale.\n",
+        "Figure: Cross-attention contextualization of pairwise slice similarity. Row-centered "
+        "pairwise cosine similarity between real-name query slices and variant key slices is "
+        "shown before cross-attention, after the first complete cross-attention and "
+        "feed-forward block, and as the signed post-minus-pre difference. Row-centering removes "
+        "the mean compatibility of each query and emphasizes relative key preference. Dashed "
+        "boxes mark the variant slices whose rendered pixels differ from the real name. The "
+        "first two panels share a similarity scale; the difference panel uses a separate "
+        "zero-centered scale.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)
