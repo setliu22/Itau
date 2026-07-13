@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-"""Freeze the best validation candidate and submit isolated final test runs."""
+# Freeze the best validation candidate and submit isolated final test runs.
 
 set -euo pipefail
 cd /home/setliu22/Itau/synth_dataset
