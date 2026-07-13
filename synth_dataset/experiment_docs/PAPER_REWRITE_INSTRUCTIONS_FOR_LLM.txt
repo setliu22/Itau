@@ -1,0 +1,111 @@
+PAPER REWRITE INSTRUCTIONS FOR AN LLM
+=====================================
+
+Repository: https://github.com/setliu22/Itau
+Relevant project folder: synth_dataset/
+
+First read:
+
+1. synth_dataset/experiment_docs/FINAL_ARCHITECTURE_SEARCH_RESULTS.txt
+2. The machine-readable CSV and JSON files listed in that document
+3. The current manuscript source files in the repository
+
+Task
+----
+
+Make a restrained revision of the existing paper. Preserve unrelated prose,
+citations, formatting, labels, and conclusions wherever possible. Do not
+rewrite the entire manuscript.
+
+Required terminology
+--------------------
+
+- Rename the internal `nocom` dataset to **Woodbridge** everywhere in the paper.
+- Rename the internal `new` or `mix65` dataset to **Synthetic (Substitution)** everywhere in the paper.
+- Do not expose internal run-directory names in reader-facing prose or tables.
+
+Required structural change
+--------------------------
+
+Move the section describing construction and composition of the synthetic
+dataset so that it appears before the Results section and before any discussion
+of experimental outcomes. Keep the methods narrative in a logical order:
+datasets, synthetic-data construction, rendering/preprocessing, architecture
+definitions, hyperparameter optimization/model selection, then results.
+
+Remove obsolete model-selection material
+----------------------------------------
+
+Remove sections, paragraphs, tables, and captions describing the old manual or
+separate process for choosing slice width, stride, pooling, learning rate, or
+other model parameters. Remove obsolete sweep results and claims based on that
+old procedure. Do not retain contradictory old parameter values.
+
+Replace that material with the current validation-only Optuna protocol from
+FINAL_ARCHITECTURE_SEARCH_RESULTS.txt. Clearly state that:
+
+- Hyperparameters were optimized independently for Woodbridge and Synthetic (Substitution).
+- Each architecture used an independent Optuna study.
+- The screening budget was five trials with at most five epochs per trial.
+- TPE sampling, Hyperband pruning, and seed 7 were used.
+- Validation ROC-AUC was the selection metric.
+- Test data was not used during architecture or hyperparameter selection.
+- The regular Transformer search was restricted to one or two layers; the superseded three-layer result must not appear.
+- After selection, the winner was trained for 25 epochs and the highest-validation-ROC-AUC checkpoint was evaluated on test.
+
+Add a short Methods subsection titled **Validation-only hyperparameter
+optimization** (or an equivalent title). Explain the Optuna logic rather than
+only naming the library:
+
+- Each architecture and dataset had an independent study with a five-trial budget.
+- Every trial jointly sampled all applicable input, optimization, pooling, and architecture-specific parameters.
+- Each trial trained for at most five epochs on the full training split and returned validation ROC-AUC.
+- One established baseline configuration was enqueued in each study.
+- The TPE sampler used seed 7 and two startup trials; after startup it proposed configurations using the completed observations.
+- Hyperband used minimum resource 2 epochs, maximum resource 5 epochs, and reduction factor 2, allowing weak trials to be pruned.
+- Completed and pruned trials counted toward the five-trial screening budget; failed infrastructure trials did not.
+- No test score, thresholded test metric, or test example influenced Optuna or final architecture selection.
+- Describe this explicitly as a compact screening study, not an exhaustive hyperparameter search.
+
+Required new tables
+-------------------
+
+Add or replace tables for all of the following:
+
+1. **Hyperparameter search spaces.** Include shared input/optimization values and architecture-specific values. Use compact ranges or categorical sets rather than listing every trial as a row.
+2. **Selected final hyperparameters.** Provide separate columns or subtables for the Woodbridge Interaction CNN winner and the Synthetic (Substitution) two-block cross-attention winner.
+3. **Final architecture summary.** Include a compact table giving the complete winning pipeline, input/slicing representation, pair processor, pooling/classifier, trainable parameter count, and selected checkpoint epoch for each dataset.
+4. **Validation ROC-AUC architecture comparison.** Include all seven rows from FINAL_ARCHITECTURE_SEARCH_RESULTS.txt, including the unsliced whole-image CNN baseline. Make clear that these are five-epoch validation screening results.
+5. **Final isolated test results.** Include only the frozen winner for each dataset, with test ROC-AUC, accuracy, precision, recall, F1, and MCC at threshold 0.5. Do not invent test results for non-winning architectures.
+
+If space permits, include confusion counts for the two final winners. Otherwise,
+retain them in accompanying prose or supplementary material.
+
+Required interpretation
+-----------------------
+
+Explain the whole-image CNN as an unsliced Siamese Conv2D baseline operating on
+native-width cached DejaVu Sans images. State the result accurately:
+
+- Slicing alone did not provide the gain, because the sliced Conv1D baseline was weaker than the whole-image CNN.
+- Sequence-aware and pair-interaction processing provided the clearest benefit on Woodbridge.
+- On Synthetic (Substitution), the two-block cross-attention model and BiLSTM slightly exceeded the whole-image CNN, but validation ROC-AUC values were near saturation and small differences should be interpreted cautiously.
+
+Accuracy and leakage constraints
+--------------------------------
+
+- Keep validation screening results separate from final 25-epoch validation results.
+- Keep validation results separate from test results.
+- Do not imply that every architecture was evaluated on test.
+- Do not use the test set to justify architecture selection.
+- Do not report the old three-layer Transformer result.
+- Do not claim the five-trial Optuna screen was exhaustive.
+- Do not copy internal unused `conv_layers` fields into the whole-image CNN description; use only `image_cnn_*` fields for that model.
+- Do not change numerical values from FINAL_ARCHITECTURE_SEARCH_RESULTS.txt unless a cited machine-readable source proves that the value is wrong.
+
+Deliverable
+-----------
+
+Modify the existing manuscript files in place and provide a concise change
+summary listing removed obsolete sections, added/replaced tables, moved
+sections, and any unresolved ambiguity. Change nothing unrelated to this task.

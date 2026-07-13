@@ -1,0 +1,13 @@
+{
+  "architecture": "cross_attention_2block",
+  "config_path": "/home/setliu22/Itau/synth_dataset/model_results/architecture_search_exports/best_config_new_after_transformer_max2_corrected.yaml",
+  "dataset": "new",
+  "final_training_epochs": 25,
+  "screening_epochs": 5,
+  "screening_validation_roc_auc": 0.9999600947757789,
+  "seed": 7,
+  "selection_rule": "highest completed screening validation ROC-AUC; ties use validation MCC, then fewer parameters",
+  "source_config": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/optuna_new/v2_fast10x5/cross_attention_2block/trials/trial_00004/resolved_config.yaml",
+  "source_trial": 4,
+  "test_set_used": false
+}

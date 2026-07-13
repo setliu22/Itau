@@ -34,8 +34,6 @@ def _suggest_final_head(
 
 
 def suggest_config(trial: optuna.Trial, dataset: str, architecture: str) -> dict[str, Any]:
-    slice_width = trial.suggest_categorical("slice_width", [6, 16, 32])
-    stride_mode = trial.suggest_categorical("stride_mode", ["nonoverlap", "half_overlap"])
     embedding_dim = trial.suggest_categorical("embedding_dim", [64, 128, 256])
     config: dict[str, Any] = {
         "dataset": dataset,
@@ -43,9 +41,6 @@ def suggest_config(trial: optuna.Trial, dataset: str, architecture: str) -> dict
         "image_height": 32,
         "background": "black",
         "font": "DejaVu Sans",
-        "slice_width": int(slice_width),
-        "stride_mode": stride_mode,
-        "stride": int(slice_width if stride_mode == "nonoverlap" else slice_width // 2),
         "remove_padding": trial.suggest_categorical("remove_padding", [False, True]),
         "embedding_dim": int(embedding_dim),
         "learning_rate": trial.suggest_float("learning_rate", 1.0e-4, 2.0e-3, log=True),
@@ -65,8 +60,33 @@ def suggest_config(trial: optuna.Trial, dataset: str, architecture: str) -> dict
         "conv_kernel_size": 3,
         "activation": "relu",
     }
+    if architecture != "whole_image_cnn":
+        slice_width = trial.suggest_categorical("slice_width", [6, 16, 32])
+        stride_mode = trial.suggest_categorical("stride_mode", ["nonoverlap", "half_overlap"])
+        config.update(
+            slice_width=int(slice_width),
+            stride_mode=stride_mode,
+            stride=int(slice_width if stride_mode == "nonoverlap" else slice_width // 2),
+        )
 
-    if architecture == "conv1d":
+    if architecture == "whole_image_cnn":
+        config["processor"] = "conv2d"
+        config["image_cnn_layers"] = trial.suggest_int("image_cnn_layers", 2, 3)
+        config["image_cnn_hidden_channels"] = trial.suggest_categorical(
+            "image_cnn_hidden_channels", [16, 32, 64]
+        )
+        config["image_cnn_kernel_size"] = trial.suggest_categorical(
+            "image_cnn_kernel_size", [3, 5]
+        )
+        config["image_cnn_activation"] = trial.suggest_categorical(
+            "image_cnn_activation", ["relu", "gelu"]
+        )
+        config["image_cnn_pooling"] = trial.suggest_categorical(
+            "image_cnn_pooling", ["mean", "max", "mean_max"]
+        )
+        _suggest_final_head(trial, config)
+        config["pair_symmetry"] = "shared_encoder_plus_symmetric_final_features"
+    elif architecture == "conv1d":
         config["processor"] = "conv1d"
         config["conv_layers"] = trial.suggest_int("conv_layers", 2, 3)
         config["conv_kernel_size"] = trial.suggest_categorical("conv_kernel_size", [3, 5])
@@ -150,7 +170,7 @@ def suggest_config(trial: optuna.Trial, dataset: str, architecture: str) -> dict
     else:
         raise ValueError(f"Unknown architecture: {architecture}")
 
-    if architecture != "interaction_cnn":
+    if architecture not in {"interaction_cnn", "whole_image_cnn"}:
         config["pair_symmetry"] = (
             "shared_encoder_plus_symmetric_final_features"
             if not architecture.startswith("cross_attention")
@@ -168,8 +188,6 @@ def baseline_parameters(dataset: str, architecture: str) -> dict[str, Any]:
     if dataset == "new" and architecture in {"conv1d", "transformer"}:
         pooling = "attention"
     common: dict[str, Any] = {
-        "slice_width": slice_width,
-        "stride_mode": "nonoverlap",
         "remove_padding": False,
         "embedding_dim": 128,
         "learning_rate": 1.0e-3,
@@ -178,7 +196,18 @@ def baseline_parameters(dataset: str, architecture: str) -> dict[str, Any]:
         "batch_size": 64,
         "early_stopping_patience": 3,
     }
-    if architecture == "conv1d":
+    if architecture != "whole_image_cnn":
+        common.update(slice_width=slice_width, stride_mode="nonoverlap")
+    if architecture == "whole_image_cnn":
+        common.update(
+            image_cnn_layers=2,
+            image_cnn_hidden_channels=32,
+            image_cnn_kernel_size=3,
+            image_cnn_activation="relu",
+            image_cnn_pooling="mean",
+            final_head="symmetric_linear",
+        )
+    elif architecture == "conv1d":
         common.update(
             conv_layers=2,
             conv_kernel_size=3,

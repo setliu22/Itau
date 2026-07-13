@@ -26,6 +26,7 @@ ARCHITECTURES = (
     "cross_attention_1block",
     "cross_attention_2block",
     "interaction_cnn",
+    "whole_image_cnn",
 )
 
 

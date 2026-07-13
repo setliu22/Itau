@@ -1,0 +1,199 @@
+FINAL ARCHITECTURE SEARCH RESULTS
+=================================
+
+Dataset names used in the paper
+-------------------------------
+
+- Internal name `nocom` means **Woodbridge**.
+- Internal name `new` or `mix65` means **Synthetic (Substitution)**.
+
+Experimental protocol
+---------------------
+
+All names were rendered in DejaVu Sans as 32-pixel-high grayscale images with
+a black background. Rendered images were cached before slicing. Architecture
+and hyperparameter selection used the corresponding training and validation
+splits only. The test splits were unavailable to the Optuna objective and were
+used only after one winner per dataset had been frozen.
+
+Each architecture had an independent Optuna study for each dataset. The fast
+screening study used five trials, at most five epochs per trial, seed 7, TPE
+sampling, and Hyperband pruning. Validation ROC-AUC was the selection metric.
+One established baseline configuration was enqueued per study. TPE used two
+startup trials and then proposed configurations from completed observations.
+Hyperband used a minimum resource of two epochs, maximum resource of five
+epochs, and reduction factor two. Completed and pruned trials counted toward
+the five-trial screening budget; failed infrastructure trials did not.
+The regular Transformer replacement study restricted the layer count to 1--2;
+the superseded three-layer result was excluded from final selection.
+
+After validation-only selection, the winning configuration for each dataset
+was trained for exactly 25 epochs on the full training split. The checkpoint
+with the highest validation ROC-AUC was evaluated once on the corresponding
+test split. Threshold-dependent test metrics below use threshold 0.5 unless
+explicitly labeled as using the validation-selected threshold.
+
+Hyperparameter search spaces
+----------------------------
+
+Shared optimization parameters:
+
+- Embedding dimension: 64, 128, 256
+- Learning rate: 1e-4 to 2e-3, log scale
+- Weight decay: 0, 1e-6, 1e-5, 1e-4
+- Dropout: 0.0, 0.1, 0.2
+- Batch size: 32, 64, 128; Interaction CNN used 32 or 64
+- Remove renderer padding: false or true
+- Early-stopping patience during screening: 2 or 3
+- Seed: 7
+- Screening budget: 5 Optuna trials and at most 5 epochs per trial
+
+Sliced-model input parameters:
+
+- Slice width: 6, 16, 32 pixels
+- Stride: non-overlapping or 50% overlap
+- Image height: fixed at 32 pixels
+- Font/background: fixed DejaVu Sans, white glyphs on black background
+
+Pair-scoring heads where applicable:
+
+- Direct cosine similarity
+- Cosine similarity plus linear calibration
+- Symmetric [absolute difference, elementwise product] plus linear layer
+- Symmetric [absolute difference, elementwise product] plus one-hidden-layer MLP
+- MLP hidden ratio: 0.5, 1.0, 2.0 times embedding dimension
+- MLP activation: ReLU or GELU
+
+Architecture-specific parameters:
+
+- Conv1D: 2 or 3 layers; kernel 3 or 5; ReLU or GELU; mean, max, or attention pooling.
+- BiLSTM: 1 or 2 layers; hidden ratio 0.5 or 1.0; final hidden, mean, or attention reduction.
+- Regular Transformer: 1 or 2 layers; 2, 4, or 8 heads; FFN ratio 1, 2, or 4; ReLU or GELU; mean or attention pooling; RoPE fixed.
+- Cross-attention: separate fixed 1-block and 2-block families; 2, 4, or 8 heads; per-slice FFN ratio 1, 2, or 4; ReLU or GELU; mean or attention pooling.
+- Interaction CNN: cosine or rich four-channel interaction map; 1--3 Conv2D layers; 16, 32, or 64 hidden channels; kernel 3 or 5; ReLU or GELU; masked mean, max, or mean+max pooling; linear or one-hidden-layer MLP classifier.
+- Whole-image CNN baseline: no slicing or horizontal resizing; 2 or 3 stride-2 Conv2D layers; hidden channels 16, 32, or 64; embedding dimension 64, 128, or 256; kernel 3 or 5; ReLU or GELU; masked mean, max, or mean+max pooling; symmetric final head.
+
+Best five-epoch validation screening results
+--------------------------------------------
+
+| Architecture | Woodbridge ROC-AUC | Synthetic (Substitution) ROC-AUC |
+|---|---:|---:|
+| Conv1D | 0.977430310 | 0.998745120 |
+| Conv1D + BiLSTM | 0.994413778 | 0.999933760 |
+| Conv1D + Transformer, 1--2 layers | 0.994442822 | 0.999428824 |
+| Conv1D + 1-block cross-attention Transformer | 0.994962630 | 0.999682305 |
+| Conv1D + 2-block cross-attention Transformer | 0.995493145 | **0.999960095** |
+| Conv1D + Interaction CNN | **0.996273419** | 0.999827963 |
+| Whole-image CNN, no slicing | 0.991435511 | 0.999873488 |
+
+The sliced Conv1D baseline alone did not outperform the whole-image CNN. The
+sequence-aware and pair-interaction models generally provided the improvement:
+all sequence-aware models exceeded the whole-image CNN on Woodbridge, while
+the two-block cross-attention model and BiLSTM slightly exceeded it on the
+Synthetic (Substitution) validation split. The Synthetic (Substitution) scores
+are close to saturation, so small differences should be interpreted cautiously.
+
+Final architecture summary
+--------------------------
+
+| Dataset | Winning architecture | Input representation | Pair processor | Pooling and classifier | Parameters | Best epoch |
+|---|---|---|---|---|---:|---:|
+| Woodbridge | Conv1D + Interaction CNN | 32-pixel-high image; 16-pixel slices; stride 8 | Shared 2-layer Conv1D, 128-dimensional slice embeddings; rich four-channel all-pairs interaction map; 3-layer Conv2D with 32 channels and kernel 5 | Masked mean interaction pooling; 32-unit MLP | 301,793 | 10/25 |
+| Synthetic (Substitution) | Conv1D + 2-block cross-attention Transformer | 32-pixel-high image; 6-pixel non-overlapping slices | Shared 2-layer Conv1D, 128-dimensional slice embeddings; two bidirectional 4-head cross-attention-plus-FFN blocks with residual connections | Attention pooling; symmetric linear head over absolute difference and elementwise product | 521,987 | 19/25 |
+
+Both winners use shared Conv1D weights for the two names. The Woodbridge model
+constructs one joint pairwise interaction representation, whereas the Synthetic
+(Substitution) model maintains two directionally cross-attended sequences before
+pooling and symmetric comparison.
+
+Selected final hyperparameters
+------------------------------
+
+Woodbridge winner: Conv1D + Interaction CNN
+
+- Slice width / stride: 16 / 8 pixels (50% overlap)
+- Remove padding: true
+- Conv1D layers / kernel: 2 / 3
+- Embedding dimension: 128
+- Interaction channels: rich four-channel map
+- Interaction Conv2D layers: 3
+- Interaction hidden channels / kernel: 32 / 5
+- Interaction activation: GELU
+- Interaction normalization: masked GroupNorm with one group
+- Interaction pooling: masked mean
+- Classifier: MLP with hidden width 32
+- Learning rate: 0.00022210177375517361
+- Weight decay: 1e-6
+- Dropout: 0.0
+- Batch size: 64
+- Seed: 7
+- Trainable parameters: 301,793
+- Best checkpoint epoch: 10 of 25
+- Final validation ROC-AUC: 0.996656427
+
+Synthetic (Substitution) winner: Conv1D + 2-block cross-attention Transformer
+
+- Slice width / stride: 6 / 6 pixels (non-overlapping)
+- Remove padding: false
+- Conv1D layers / kernel: 2 / 3
+- Embedding dimension: 128
+- Cross-attention blocks: 2
+- Attention heads: 4
+- Per-slice FFN ratio / dimension: 1 / 128
+- Cross-attention and FFN activation: ReLU
+- Sequence pooling: attention
+- Final scoring head: symmetric linear over absolute difference and elementwise product
+- Learning rate: 0.00022190559639249238
+- Weight decay: 1e-6
+- Dropout: 0.0
+- Batch size: 64
+- Seed: 7
+- Trainable parameters: 521,987
+- Best checkpoint epoch: 19 of 25
+- Final validation ROC-AUC: 1.000000000
+
+Final isolated test results at threshold 0.5
+--------------------------------------------
+
+| Dataset | Frozen architecture | Test ROC-AUC | Accuracy | Precision | Recall | F1 | MCC |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Woodbridge | Conv1D + Interaction CNN | 0.994213718 | 0.963361180 | 0.972963780 | 0.969959005 | 0.971459069 | 0.920315817 |
+| Synthetic (Substitution) | Conv1D + 2-block cross-attention Transformer | 0.999988807 | 0.999388834 | 0.999201201 | 0.999848614 | 0.999524803 | 0.998669082 |
+
+Confusion counts at threshold 0.5:
+
+| Dataset | TN | FP | FN | TP |
+|---|---:|---:|---:|---:|
+| Woodbridge | 87,294 | 4,451 | 4,961 | 160,180 |
+| Synthetic (Substitution) | 91,613 | 132 | 25 | 165,116 |
+
+Results at the validation-selected best-F1 threshold:
+
+| Dataset | Threshold | Accuracy | Precision | Recall | F1 | MCC |
+|---|---:|---:|---:|---:|---:|---:|
+| Woodbridge | 0.351251543 | 0.962454163 | 0.963353874 | 0.978830212 | 0.971030381 | 0.917939890 |
+| Synthetic (Substitution) | 0.993970156 | 0.999092983 | 0.999854507 | 0.998734415 | 0.999294147 | 0.998026829 |
+
+Canonical machine-readable sources
+----------------------------------
+
+- model_results/architecture_search_exports/validation_architecture_comparison_with_whole_image_nocom.csv
+- model_results/architecture_search_exports/validation_architecture_comparison_with_whole_image_new.csv
+- model_results/optuna_nocom/v4_whole_image_cnn/whole_image_cnn/trials_export.csv
+- model_results/optuna_new/v4_whole_image_cnn/whole_image_cnn/trials_export.csv
+- model_results/architecture_search_exports/all_trials_nocom_after_transformer_max2.csv
+- model_results/architecture_search_exports/all_trials_new_after_transformer_max2.csv
+- model_results/final_nocom/v3_transformer_max2_reselection/training_seed_7/metrics.json
+- model_results/final_nocom/v3_transformer_max2_reselection/test_seed_7/metrics.json
+- model_results/final_new/v3_transformer_max2_corrected_selection/training_seed_7/metrics.json
+- model_results/final_new/v3_transformer_max2_corrected_selection/test_seed_7/metrics.json
+
+Important reporting constraints
+-------------------------------
+
+- The architecture comparison table is validation-only.
+- Only the frozen winner for each dataset was evaluated on test.
+- Do not report test metrics for non-winning architectures.
+- Do not include the superseded three-layer regular Transformer result.
+- Five Optuna trials per architecture is a screening study, not an exhaustive search.
+- Whole-image CNN configuration files contain unused inherited Conv1D metadata fields; the actual model contains only Conv2D layers and uses the `image_cnn_*` fields.

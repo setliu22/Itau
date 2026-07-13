@@ -1,0 +1,13 @@
+{
+  "architecture": "interaction_cnn",
+  "config_path": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/architecture_search_exports/best_config_nocom.yaml",
+  "dataset": "nocom",
+  "final_training_epochs": 25,
+  "screening_epochs": 5,
+  "screening_validation_roc_auc": 0.9962734191771828,
+  "seed": 7,
+  "selection_rule": "highest completed screening validation ROC-AUC; ties use validation MCC, then fewer parameters",
+  "source_config": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/optuna_nocom/v2_fast10x5/interaction_cnn/trials/trial_00002/resolved_config.yaml",
+  "source_trial": 2,
+  "test_set_used": false
+}
