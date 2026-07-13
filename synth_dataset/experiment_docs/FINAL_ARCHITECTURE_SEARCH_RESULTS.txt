@@ -86,12 +86,12 @@ Best five-epoch validation screening results
 | Conv1D + Interaction CNN | **0.996273419** | 0.999827963 |
 | Whole-image CNN, no slicing | 0.991435511 | 0.999873488 |
 
-The sliced Conv1D baseline alone did not outperform the whole-image CNN. The
-sequence-aware and pair-interaction models generally provided the improvement:
-all sequence-aware models exceeded the whole-image CNN on Woodbridge, while
-the two-block cross-attention model and BiLSTM slightly exceeded it on the
-Synthetic (Substitution) validation split. The Synthetic (Substitution) scores
-are close to saturation, so small differences should be interpreted cautiously.
+The sliced Conv1D baseline alone did not outperform the whole-image CNN. On
+Woodbridge, the BiLSTM, regular Transformer, both cross-attention models, and
+Interaction CNN exceeded the whole-image CNN. On Synthetic (Substitution), the
+two-block cross-attention model and BiLSTM slightly exceeded it. The Synthetic
+(Substitution) scores are close to saturation, so small differences should be
+interpreted cautiously.
 
 Final architecture summary
 --------------------------

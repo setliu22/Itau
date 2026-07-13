@@ -88,7 +88,7 @@ Explain the whole-image CNN as an unsliced Siamese Conv2D baseline operating on
 native-width cached DejaVu Sans images. State the result accurately:
 
 - Slicing alone did not provide the gain, because the sliced Conv1D baseline was weaker than the whole-image CNN.
-- Sequence-aware and pair-interaction processing provided the clearest benefit on Woodbridge.
+- On Woodbridge, BiLSTM, regular Transformer, both cross-attention models, and Interaction CNN exceeded the whole-image CNN; the plain sliced Conv1D baseline did not.
 - On Synthetic (Substitution), the two-block cross-attention model and BiLSTM slightly exceeded the whole-image CNN, but validation ROC-AUC values were near saturation and small differences should be interpreted cautiously.
 
 Accuracy and leakage constraints
