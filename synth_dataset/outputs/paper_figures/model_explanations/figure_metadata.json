@@ -1,0 +1,418 @@
+{
+  "device": "cuda",
+  "font": "DejaVu Sans",
+  "interaction": {
+    "run": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_nocom/v2_fast10x5/training_seed_7",
+    "checkpoint": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_nocom/v2_fast10x5/training_seed_7/best.pt",
+    "architecture": "interaction_cnn",
+    "slice_width": 16,
+    "stride": 8,
+    "channel_visualized": "cosine channel from the exact rich interaction tensor; displayed on [0, 1] because the Conv1D stem ends in ReLU and therefore emits nonnegative vectors",
+    "patterns": [
+      {
+        "pattern": "no change",
+        "variant": "grammarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9970209002494812,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      },
+      {
+        "pattern": "OCR-confusable substitution",
+        "variant": "grǝmmarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9983265995979309,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      },
+      {
+        "pattern": "internal insertion",
+        "variant": "gram-marly",
+        "real_name": "grammarly",
+        "model_probability": 0.9986171722412109,
+        "matrix_shape": [
+          17,
+          16
+        ]
+      },
+      {
+        "pattern": "adjacent transposition",
+        "variant": "grammraly",
+        "real_name": "grammarly",
+        "model_probability": 0.9993602633476257,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      },
+      {
+        "pattern": "internal deletion",
+        "variant": "gramarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9720664620399475,
+        "matrix_shape": [
+          12,
+          16
+        ]
+      },
+      {
+        "pattern": "m→rn substitution",
+        "variant": "grarnmarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9991505146026611,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  "cross_attention": {
+    "run": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_new/v3_transformer_max2_corrected_selection/training_seed_7",
+    "checkpoint": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_new/v3_transformer_max2_corrected_selection/training_seed_7/best.pt",
+    "architecture": "cross_attention_2block",
+    "slice_width": 6,
+    "stride": 6,
+    "attention_heads": 4,
+    "attention_blocks": 2,
+    "attention_visualized": "per-direction weights averaged across heads",
+    "variant": "grǝmmarly",
+    "real_name": "grammarly",
+    "model_probability": 1.0,
+    "maps": [
+      {
+        "title": "B1: variant → real",
+        "shape": [
+          23,
+          23
+        ]
+      },
+      {
+        "title": "B1: real → variant",
+        "shape": [
+          23,
+          23
+        ]
+      },
+      {
+        "title": "B2: variant → real",
+        "shape": [
+          23,
+          23
+        ]
+      },
+      {
+        "title": "B2: real → variant",
+        "shape": [
+          23,
+          23
+        ]
+      }
+    ],
+    "attention_diagnostics": [
+      {
+        "block": 1,
+        "direction": "variant_to_real",
+        "first_key_mean_attention": 0.164842426776886,
+        "highest_mean_attention_key": 0,
+        "highest_mean_attention": 0.164842426776886,
+        "mean_attention_by_key": [
+          0.164842426776886,
+          0.04355335235595703,
+          0.041662730276584625,
+          0.04409543797373772,
+          0.031394876539707184,
+          0.05777615308761597,
+          0.03299712762236595,
+          0.030559387058019638,
+          0.026944410055875778,
+          0.02877209521830082,
+          0.028345581144094467,
+          0.028834328055381775,
+          0.02629365585744381,
+          0.02777409926056862,
+          0.027210388332605362,
+          0.09350086748600006,
+          0.04070741683244705,
+          0.03288878872990608,
+          0.03645401820540428,
+          0.028247779235243797,
+          0.049335308372974396,
+          0.03642374649643898,
+          0.041386041790246964
+        ],
+        "per_head_first_key_mean_attention": [
+          0.17592044174671173,
+          0.3393179774284363,
+          0.07474113255739212,
+          0.06939017027616501
+        ],
+        "per_head_highest_mean_attention_key": [
+          15,
+          0,
+          0,
+          0
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05145016312599182,
+          0.21407270431518555,
+          0.2362336665391922,
+          0.17234478890895844,
+          0.06821895390748978,
+          0.18915443122386932,
+          0.18225081264972687,
+          0.1266748309135437,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 4.76837158203125e-06
+      },
+      {
+        "block": 1,
+        "direction": "real_to_variant",
+        "first_key_mean_attention": 0.13648706674575806,
+        "highest_mean_attention_key": 0,
+        "highest_mean_attention": 0.13648706674575806,
+        "mean_attention_by_key": [
+          0.13648706674575806,
+          0.03640378266572952,
+          0.04345729202032089,
+          0.03806763514876366,
+          0.029404427856206894,
+          0.12529511749744415,
+          0.047693513333797455,
+          0.021467063575983047,
+          0.028841426596045494,
+          0.023124223574995995,
+          0.027354929596185684,
+          0.02091282419860363,
+          0.032279036939144135,
+          0.023303739726543427,
+          0.0261390283703804,
+          0.06475856900215149,
+          0.04821128398180008,
+          0.043402113020420074,
+          0.02473929151892662,
+          0.030446644872426987,
+          0.0533471517264843,
+          0.033720508217811584,
+          0.04114336520433426
+        ],
+        "per_head_first_key_mean_attention": [
+          0.005615481175482273,
+          0.0994575247168541,
+          0.25202488899230957,
+          0.18885040283203125
+        ],
+        "per_head_highest_mean_attention_key": [
+          5,
+          0,
+          0,
+          0
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05612744763493538,
+          0.21200980246067047,
+          0.2307802438735962,
+          0.1267973780632019,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.13872550427913666,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 6.67572021484375e-06
+      },
+      {
+        "block": 2,
+        "direction": "variant_to_real",
+        "first_key_mean_attention": 0.04016747698187828,
+        "highest_mean_attention_key": 2,
+        "highest_mean_attention": 0.04756852239370346,
+        "mean_attention_by_key": [
+          0.04016747698187828,
+          0.044189080595970154,
+          0.04756852239370346,
+          0.045751094818115234,
+          0.04266539588570595,
+          0.04045857489109039,
+          0.040291011333465576,
+          0.041830431669950485,
+          0.04518504440784454,
+          0.04468656703829765,
+          0.04475323483347893,
+          0.04229129105806351,
+          0.04574204981327057,
+          0.044181812554597855,
+          0.04379579424858093,
+          0.040424950420856476,
+          0.04040198028087616,
+          0.04299509897828102,
+          0.042219143360853195,
+          0.044085416942834854,
+          0.04619567468762398,
+          0.0461520217359066,
+          0.04396834224462509
+        ],
+        "per_head_first_key_mean_attention": [
+          0.04341395944356918,
+          0.03503628075122833,
+          0.042043913155794144,
+          0.04017575830221176
+        ],
+        "per_head_highest_mean_attention_key": [
+          12,
+          21,
+          2,
+          3
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05145016312599182,
+          0.21407270431518555,
+          0.2362336665391922,
+          0.17234478890895844,
+          0.06821895390748978,
+          0.18915443122386932,
+          0.18225081264972687,
+          0.1266748309135437,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 1.6689300537109375e-06
+      },
+      {
+        "block": 2,
+        "direction": "real_to_variant",
+        "first_key_mean_attention": 0.04796593636274338,
+        "highest_mean_attention_key": 16,
+        "highest_mean_attention": 0.0508691743016243,
+        "mean_attention_by_key": [
+          0.04796593636274338,
+          0.04642122983932495,
+          0.046664047986269,
+          0.040290895849466324,
+          0.039604466408491135,
+          0.04839056730270386,
+          0.04833132401108742,
+          0.04335153102874756,
+          0.039620500057935715,
+          0.03972381353378296,
+          0.03895861655473709,
+          0.04001399129629135,
+          0.03958934545516968,
+          0.039767008274793625,
+          0.0382879264652729,
+          0.04842900112271309,
+          0.0508691743016243,
+          0.05007319524884224,
+          0.04125403240323067,
+          0.03885284811258316,
+          0.043182216584682465,
+          0.04651404544711113,
+          0.043844304978847504
+        ],
+        "per_head_first_key_mean_attention": [
+          0.04855950176715851,
+          0.05227271094918251,
+          0.045139387249946594,
+          0.045892152935266495
+        ],
+        "per_head_highest_mean_attention_key": [
+          18,
+          16,
+          6,
+          2
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05612744763493538,
+          0.21200980246067047,
+          0.2307802438735962,
+          0.1267973780632019,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.13872550427913666,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 1.9073486328125e-06
+      }
+    ],
+    "substitution_contrast": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "baseline_pair": [
+        "grammarly",
+        "grammarly"
+      ],
+      "definition": "attention(variant, real) - attention(real, real)",
+      "block": 1,
+      "directions": [
+        "B1: variant → real",
+        "B1: real → variant"
+      ],
+      "symmetric_color_limit": 0.22232121229171753
+    }
+  }
+}
