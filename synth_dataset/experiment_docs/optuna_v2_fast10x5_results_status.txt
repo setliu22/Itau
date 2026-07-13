@@ -1,0 +1,61 @@
+Architecture Search Results Status
+==================================
+
+Search version: v2_fast10x5
+Screening design: five Optuna trials per architecture and dataset, maximum five
+epochs per trial, validation ROC-AUC selection metric, seed 7. Test splits were
+not read during screening.
+
+Canonical machine-readable exports:
+  model_results/architecture_search_exports/all_trials_nocom.csv
+  model_results/architecture_search_exports/all_trials_new.csv
+  model_results/architecture_search_exports/best_trial_per_architecture_nocom.csv
+  model_results/architecture_search_exports/best_trial_per_architecture_new.csv
+  model_results/architecture_search_exports/best_config_nocom.yaml
+  model_results/architecture_search_exports/best_config_new.yaml
+
+Completed screening winners by architecture
+-------------------------------------------
+Dataset: nocom
+architecture                 trial  validation ROC-AUC  best epoch  parameters
+conv1d                           0          0.977430           5      123,138
+bilstm                           4          0.994414           5      378,369
+transformer                      2          0.991904           5      642,946
+cross_attention_1block           2          0.994963           5      322,306
+cross_attention_2block           4          0.995493           5    2,190,849
+interaction_cnn                  2          0.996273           5      301,793
+
+Selected nocom screening winner: interaction_cnn, trial 2.
+Its resolved configuration is stored in best_config_nocom.yaml.
+
+Dataset: new (mix65)
+architecture                 trial  validation ROC-AUC  best epoch  parameters
+conv1d                           1          0.998745           5      541,699
+bilstm                           3          0.999934           5      103,617
+transformer                      1          0.999965           4    2,057,473
+cross_attention_1block           3          0.999682           5      510,978
+cross_attention_2block           4          0.999960           4      521,987
+interaction_cnn                  4          0.999828           5      112,001
+
+Selected new-dataset screening winner: transformer, trial 1.
+Its resolved configuration is stored in best_config_new.yaml.
+
+Final-training status
+---------------------
+The two 25-epoch frozen-winner trainings were started with seed 7:
+  nocom: job 17811206
+  new:   job 17811208
+
+Both jobs were manually cancelled by Slurm user 225273 after about 30 minutes
+on 2026-07-13, before completing 25 epochs. Consequently, the dependent test
+jobs 17811207 and 17811209 were cancelled before start. No final-test metric is
+claimed by this record. Interrupted checkpoints and histories are retained at:
+  model_results/final_nocom/v2_fast10x5/training_seed_7/
+  model_results/final_new/v2_fast10x5/training_seed_7/
+
+Scope note
+----------
+The regular Transformer search allowed transformer_layers in {1, 2, 3}. The
+cross-attention architectures were separate fixed-depth families: one complete
+cross-attention-plus-FFN block or two such blocks. They did not use the regular
+Transformer layer-count parameter.
