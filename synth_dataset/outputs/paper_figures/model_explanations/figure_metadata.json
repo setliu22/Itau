@@ -411,6 +411,29 @@
       "direction": "B1: real → variant",
       "symmetric_color_limit": 0.22232121229171753,
       "scale_note": "One zero-centered symmetric color scale is used."
+    },
+    "contextual_similarity": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "direction": "real_query_to_variant_key",
+      "before_range": [
+        0.00592916551977396,
+        1.0
+      ],
+      "after_range": [
+        -0.238234743475914,
+        0.7008827328681946
+      ],
+      "change_range": [
+        -0.75529545545578,
+        0.2256864756345749
+      ],
+      "shared_similarity_scale": [
+        -1.0,
+        1.0
+      ],
+      "symmetric_change_limit": 0.75529545545578,
+      "definition": "cosine(after_block_1) - cosine(before_cross_attention)"
     }
   }
 }

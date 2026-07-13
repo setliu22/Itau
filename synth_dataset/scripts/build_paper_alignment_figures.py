@@ -531,6 +531,103 @@ def plot_cross_attention_contrast(
     }
 
 
+def plot_cross_attention_contextual_similarity(
+    model: PairClassifier,
+    config: dict[str, Any],
+    variant: str,
+    real: str,
+    device: torch.device,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Show how Block 1 changes real-to-variant pairwise slice similarity."""
+
+    pair = encode_pair(model, config, variant, real, device)
+
+    def pairwise_cosine(query: torch.Tensor, key: torch.Tensor) -> np.ndarray:
+        with torch.no_grad():
+            values = torch.einsum(
+                "bld,bmd->blm",
+                F.normalize(query, dim=-1),
+                F.normalize(key, dim=-1),
+            )
+        return values[0].cpu().numpy()
+
+    # Rows are real-name queries and columns are variant keys, matching the
+    # retained real->variant attention direction.
+    before = pairwise_cosine(pair.sequence_b, pair.sequence_a)
+    with torch.no_grad():
+        contextual_a, contextual_b = model.pair_head.blocks[0](
+            pair.sequence_a,
+            pair.mask_a,
+            pair.sequence_b,
+            pair.mask_b,
+        )
+    after = pairwise_cosine(contextual_b, contextual_a)
+    change = after - before
+
+    shared_min = float(min(before.min(), after.min()))
+    shared_max = float(max(before.max(), after.max()))
+    if shared_min < 0.0:
+        similarity_limit = max(abs(shared_min), abs(shared_max))
+        similarity_cmap = "RdBu_r"
+        similarity_vmin = -similarity_limit
+        similarity_vmax = similarity_limit
+    else:
+        similarity_cmap = "Reds"
+        similarity_vmin = 0.0
+        similarity_vmax = 1.0
+    change_limit = float(np.abs(change).max())
+
+    panels = (
+        ("(a) Before cross-attention", before, similarity_cmap, similarity_vmin, similarity_vmax),
+        ("(b) After Block 1", after, similarity_cmap, similarity_vmin, similarity_vmax),
+        ("(c) Contextual change", change, "RdBu_r", -change_limit, change_limit),
+    )
+    figure = plt.figure(figsize=(7.2, 3.05))
+    outer = figure.add_gridspec(
+        1, 3, wspace=0.34, left=0.045, right=0.85, top=0.89, bottom=0.17
+    )
+    images = []
+    for index, (title, matrix, cmap, vmin, vmax) in enumerate(panels):
+        images.append(
+            add_map_panel(
+                figure,
+                outer[index],
+                matrix,
+                pair.image_b,
+                pair.image_a,
+                title,
+                cmap=cmap,
+                vmin=vmin,
+                vmax=vmax,
+                x_label="Variant key slice",
+                y_label="Real query slice",
+            )
+        )
+    similarity_axis = figure.add_axes((0.875, 0.22, 0.010, 0.56))
+    similarity_bar = figure.colorbar(images[1], cax=similarity_axis)
+    similarity_bar.ax.set_title("cos", fontsize=6.5, pad=3)
+    similarity_bar.ax.tick_params(labelsize=5.5, length=2)
+    change_axis = figure.add_axes((0.94, 0.22, 0.010, 0.56))
+    change_bar = figure.colorbar(images[2], cax=change_axis)
+    change_bar.ax.set_title("Δcos", fontsize=6.5, pad=3)
+    change_bar.ax.tick_params(labelsize=5.5, length=2)
+    for suffix in ("png", "pdf"):
+        figure.savefig(output_dir / f"cross_attention_contextual_similarity.{suffix}", dpi=300)
+    plt.close(figure)
+    return {
+        "variant": variant,
+        "real_name": real,
+        "direction": "real_query_to_variant_key",
+        "before_range": [float(before.min()), float(before.max())],
+        "after_range": [float(after.min()), float(after.max())],
+        "change_range": [float(change.min()), float(change.max())],
+        "shared_similarity_scale": [similarity_vmin, similarity_vmax],
+        "symmetric_change_limit": change_limit,
+        "definition": "cosine(after_block_1) - cosine(before_cross_attention)",
+    }
+
+
 def main() -> int:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -571,6 +668,14 @@ def main() -> int:
         device,
         args.output_dir,
     )
+    contextual_similarity_record = plot_cross_attention_contextual_similarity(
+        cross_model,
+        cross_config,
+        args.substitution_name,
+        args.base_name,
+        device,
+        args.output_dir,
+    )
     metadata = {
         "device": str(device),
         "font": "DejaVu Sans",
@@ -597,6 +702,7 @@ def main() -> int:
             "attention_visualized": "per-direction weights averaged across heads",
             **cross_record,
             "substitution_contrast": contrast_record,
+            "contextual_similarity": contextual_similarity_record,
         },
     }
     (args.output_dir / "figure_metadata.json").write_text(
@@ -622,7 +728,12 @@ def main() -> int:
         "shows attention weights for the OCR-confusable pair minus the corresponding no-change "
         "weights. Subtracting the matched baseline suppresses static boundary attention and "
         "isolates changes associated with the substituted glyph. Red denotes increased and "
-        "blue denotes decreased attention relative to the no-change pair.\n",
+        "blue denotes decreased attention relative to the no-change pair.\n\n"
+        "Figure: Cross-attention contextualization of pairwise slice similarity. Pairwise "
+        "cosine similarity between real-name query slices and variant key slices is shown "
+        "before cross-attention, after the first complete cross-attention and feed-forward "
+        "block, and as the signed post-minus-pre difference. The first two panels share a "
+        "similarity scale; the difference panel uses a separate zero-centered scale.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)
