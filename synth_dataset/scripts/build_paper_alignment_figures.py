@@ -483,46 +483,39 @@ def plot_cross_attention_contrast(
     unchanged_pair = encode_pair(model, config, real, real, device)
     changed_maps, _ = attention_maps(model, changed_pair)
     unchanged_maps, _ = attention_maps(model, unchanged_pair)
-    # Block 1 is the interpretable alignment stage. Block 2 is retained in the
-    # raw diagnostic figure but is nearly uniform and adds little here.
-    contrasts: list[tuple[str, np.ndarray, np.ndarray, np.ndarray]] = []
-    for changed, unchanged in zip(changed_maps[:2], unchanged_maps[:2]):
-        title, changed_matrix, query_image, key_image = changed
-        unchanged_matrix = unchanged[1]
-        if changed_matrix.shape != unchanged_matrix.shape:
-            raise ValueError(
-                "Contrastive attention requires equal slice shapes; got "
-                f"{changed_matrix.shape} and {unchanged_matrix.shape}"
-            )
-        contrasts.append((title, changed_matrix - unchanged_matrix, query_image, key_image))
-
-    limits = [float(np.abs(matrix).max()) for _, matrix, _, _ in contrasts]
-    figure = plt.figure(figsize=(7.2, 3.15))
-    outer = figure.add_gridspec(
-        1, 2, wspace=0.38, left=0.06, right=0.88, top=0.90, bottom=0.16
-    )
-    images = []
-    for index, (title, matrix, query_image, key_image) in enumerate(contrasts):
-        image = add_map_panel(
-            figure,
-            outer[index],
-            matrix,
-            query_image,
-            key_image,
-            f"({chr(97 + index)}) {title}",
-            cmap="RdBu_r",
-            vmin=-limits[index],
-            vmax=limits[index],
-            x_label="Key slice",
-            y_label="Query slice",
+    # Use only Block 1 real->variant. In the opposite direction the changed
+    # query activates a learned first-key boundary anchor, which is genuine
+    # model behavior but not a useful character-alignment visualization.
+    changed = changed_maps[1]
+    unchanged = unchanged_maps[1]
+    title, changed_matrix, query_image, key_image = changed
+    unchanged_matrix = unchanged[1]
+    if changed_matrix.shape != unchanged_matrix.shape:
+        raise ValueError(
+            "Contrastive attention requires equal slice shapes; got "
+            f"{changed_matrix.shape} and {unchanged_matrix.shape}"
         )
-        images.append(image)
-    color_positions = (0.465, 0.91)
-    for image, position in zip(images, color_positions):
-        color_axis = figure.add_axes((position, 0.22, 0.010, 0.56))
-        colorbar = figure.colorbar(image, cax=color_axis)
-        colorbar.ax.set_title("ΔA", fontsize=6.5, pad=3)
-        colorbar.ax.tick_params(labelsize=5.5, length=2)
+    matrix = changed_matrix - unchanged_matrix
+    limit = float(np.abs(matrix).max())
+    figure = plt.figure(figsize=(3.65, 3.20))
+    outer = figure.add_gridspec(1, 1, left=0.15, right=0.82, top=0.90, bottom=0.16)
+    image = add_map_panel(
+        figure,
+        outer[0],
+        matrix,
+        query_image,
+        key_image,
+        "B1: real → variant",
+        cmap="RdBu_r",
+        vmin=-limit,
+        vmax=limit,
+        x_label="Variant key slice",
+        y_label="Real query slice",
+    )
+    color_axis = figure.add_axes((0.88, 0.22, 0.022, 0.56))
+    colorbar = figure.colorbar(image, cax=color_axis)
+    colorbar.ax.set_title("ΔA", fontsize=6.5, pad=3)
+    colorbar.ax.tick_params(labelsize=5.5, length=2)
     for suffix in ("png", "pdf"):
         figure.savefig(output_dir / f"cross_attention_substitution_contrast.{suffix}", dpi=300)
     plt.close(figure)
@@ -532,9 +525,9 @@ def plot_cross_attention_contrast(
         "baseline_pair": [real, real],
         "definition": "attention(variant, real) - attention(real, real)",
         "block": 1,
-        "directions": [title for title, _, _, _ in contrasts],
-        "independent_symmetric_color_limits": limits,
-        "scale_note": "Each direction uses its own zero-centered symmetric color scale.",
+        "direction": title,
+        "symmetric_color_limit": limit,
+        "scale_note": "One zero-centered symmetric color scale is used.",
     }
 
 
@@ -625,12 +618,11 @@ def main() -> int:
         f"heads for {args.substitution_name!r} and {args.base_name!r}. The maps illustrate "
         "how the model exchanges localized evidence before per-slice feed-forward processing "
         "and attention pooling.\n\n"
-        "Figure: Substitution-induced cross-attention change. Each Block 1 map shows the "
-        "attention weights for the OCR-confusable pair minus the corresponding no-change "
-        "attention weights. Subtracting the matched baseline suppresses static boundary "
-        "attention and isolates changes associated with the substituted glyph. Each direction "
-        "uses an independent zero-centered symmetric color scale; color magnitude must "
-        "therefore be interpreted within, not between, panels.\n",
+        "Figure: Substitution-induced cross-attention change. The Block 1 real-to-variant map "
+        "shows attention weights for the OCR-confusable pair minus the corresponding no-change "
+        "weights. Subtracting the matched baseline suppresses static boundary attention and "
+        "isolates changes associated with the substituted glyph. Red denotes increased and "
+        "blue denotes decreased attention relative to the no-change pair.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)

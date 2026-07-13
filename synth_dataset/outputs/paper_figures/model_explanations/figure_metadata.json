@@ -408,15 +408,9 @@
       ],
       "definition": "attention(variant, real) - attention(real, real)",
       "block": 1,
-      "directions": [
-        "B1: variant → real",
-        "B1: real → variant"
-      ],
-      "independent_symmetric_color_limits": [
-        0.12612445652484894,
-        0.22232121229171753
-      ],
-      "scale_note": "Each direction uses its own zero-centered symmetric color scale."
+      "direction": "B1: real → variant",
+      "symmetric_color_limit": 0.22232121229171753,
+      "scale_note": "One zero-centered symmetric color scale is used."
     }
   }
 }
