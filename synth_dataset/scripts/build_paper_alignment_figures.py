@@ -949,7 +949,9 @@ def plot_cross_attention_before_after_routing(
     key_strip.set_xlim(-0.5, sequence_length - 0.5)
     key_strip.set_xticks([])
     key_strip.set_yticks([])
-    key_strip.set_title(r"(a) Before and after: $\bar{A}_j=L_q^{-1}\sum_i A_{ij}$", fontsize=8.5, pad=4)
+    key_strip.set_title(
+        "(a) Average attention received by each slice", fontsize=8.5, pad=4
+    )
 
     received = figure.add_subplot(left_grid[1], sharex=key_strip)
     indices = np.arange(sequence_length)
@@ -959,26 +961,18 @@ def plot_cross_attention_before_after_routing(
     )
     received.plot(
         indices, clean_received, color="0.35", linewidth=1.2,
-        marker="o", markersize=2.2, label="clean keys",
+        marker="o", markersize=2.2, label="before substitution",
     )
     received.plot(
         indices, spoof_received, color="#b2182b", linewidth=1.35,
-        marker="o", markersize=2.2, label="spoof keys",
+        marker="o", markersize=2.2, label="after substitution",
     )
     received.set_xlim(-0.5, sequence_length - 0.5)
     received.set_xlabel("Key-slice index", fontsize=7)
-    received.set_ylabel(r"Mean attention received, $\bar{A}_j$", fontsize=7)
+    received.set_ylabel("Mean attention received", fontsize=7)
     received.tick_params(labelsize=6.5, length=2)
     received.grid(axis="y", color="0.88", linewidth=0.45)
     received.legend(loc="upper right", frameon=False, fontsize=5.8)
-    received.text(
-        0.02, 0.04,
-        "$M_S(A)=L_q^{-1}\\sum_i\\sum_{j\\in S}A_{ij}$\n"
-        f"clean: {clean_span_mass:.3f}   spoof: {spoof_span_mass:.3f}\n"
-        f"$\\Delta M_S$: {span_mass_change:+.3f}",
-        transform=received.transAxes, fontsize=6.0, va="bottom",
-        bbox={"facecolor": "white", "edgecolor": "0.75", "alpha": 0.92, "pad": 2.0},
-    )
 
     route = figure.add_subplot(outer[1])
     route.imshow(
@@ -1022,31 +1016,11 @@ def plot_cross_attention_before_after_routing(
     route.set_xticks(np.arange(0, sequence_length, 5))
     route.set_yticks([])
     route.set_xlabel("Slice index", fontsize=7)
-    route.set_title(r"(b) Net routing change: $\Delta A=A_{spoof}-A_{clean}$", fontsize=8.5, pad=4)
-    image_label_style = {
-        "color": "white", "fontsize": 6.3, "fontweight": "semibold",
-        "bbox": {"facecolor": "black", "edgecolor": "none", "alpha": 0.7, "pad": 1.1},
-    }
-    route.text(
-        0.012, 0.91, "Real queries", transform=route.transAxes,
-        ha="left", va="center", **image_label_style,
-    )
-    route.text(
-        0.012, 0.09, "Spoof keys", transform=route.transAxes,
-        ha="left", va="center", **image_label_style,
-    )
-    route.text(
-        0.985, 0.68,
-        f"$||\\Delta A||_F={frobenius_norm:.3f}$\n"
-        f"$\\max|\\Delta A_{{ij}}|={max_abs_change:.3f}$\n"
-        f"mass reassigned $={redistributed_mass:.3f}$",
-        transform=route.transAxes, ha="right", va="center", fontsize=6.0,
-        bbox={"facecolor": "white", "edgecolor": "0.75", "alpha": 0.92, "pad": 2.0},
-    )
+    route.set_title("(b) Net routing change (after − before)", fontsize=8.5, pad=4)
     route.legend(
         handles=[
-            Line2D([0], [0], color="#b2182b", linewidth=1.5, label=r"$\Delta A_{ij}>0$"),
-            Line2D([0], [0], color="#2166ac", linewidth=1.5, linestyle="--", label=r"$\Delta A_{ij}<0$"),
+            Line2D([0], [0], color="#b2182b", linewidth=1.5, label="increased attention"),
+            Line2D([0], [0], color="#2166ac", linewidth=1.5, linestyle="--", label="decreased attention"),
         ],
         loc="center right", frameon=False, fontsize=6,
     )
@@ -1214,10 +1188,8 @@ def main() -> int:
         "OCR-confusable substitution, with the glyph-affected span shaded. The right panel "
         "shows the largest signed entries of ΔA = A_spoof - A_clean: red arrows indicate "
         "increased query-to-key attention and blue dashed links indicate decreased attention. "
-        "The insets report changed-span attention mass, the Frobenius norm and maximum absolute "
-        "entry of ΔA, and the mean total-variation mass reassigned across queries. Attention "
-        "weights are from Block 1 in the real-query-to-variant-key direction and are averaged "
-        "across heads.\n",
+        "Attention weights are from Block 1 in the real-query-to-variant-key direction and are "
+        "averaged across heads.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)
