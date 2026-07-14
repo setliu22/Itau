@@ -29,6 +29,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
+from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -679,6 +681,192 @@ def plot_cross_attention_contextual_similarity(
     }
 
 
+def plot_static_map_vs_dynamic_routing(
+    interaction_model: PairClassifier,
+    interaction_config: dict[str, Any],
+    cross_model: PairClassifier,
+    cross_config: dict[str, Any],
+    variant: str,
+    real: str,
+    device: torch.device,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Compare a fixed pairwise map with substitution-induced attention routing."""
+
+    interaction_pair = encode_pair(
+        interaction_model, interaction_config, variant, real, device
+    )
+    interaction_matrix = cosine_map(interaction_pair)
+
+    changed_pair = encode_pair(cross_model, cross_config, variant, real, device)
+    unchanged_pair = encode_pair(cross_model, cross_config, real, real, device)
+    changed_maps, _ = attention_maps(cross_model, changed_pair)
+    unchanged_maps, _ = attention_maps(cross_model, unchanged_pair)
+    # Index 1 is Block 1 real-query -> variant-key in the retained map order.
+    attention_delta = changed_maps[1][1] - unchanged_maps[1][1]
+
+    real_slices, _ = render_slices(real, cross_config)
+    pixel_change = np.mean(
+        np.abs(changed_pair.slices_a - real_slices.numpy()), axis=(1, 2)
+    )
+    changed_indices = np.flatnonzero(pixel_change > 1e-6)
+    if not changed_indices.size:
+        raise ValueError("No changed key slices found for routing comparison")
+    changed_span = (int(changed_indices.min()), int(changed_indices.max()))
+
+    def strongest_edges(values: np.ndarray, count: int, *, positive: bool) -> list[tuple[int, int, float]]:
+        flat = values.ravel()
+        order = np.argsort(flat)
+        if positive:
+            order = order[::-1]
+        output: list[tuple[int, int, float]] = []
+        for flat_index in order.tolist():
+            value = float(flat[flat_index])
+            if (positive and value <= 0.0) or (not positive and value >= 0.0):
+                break
+            query, key = np.unravel_index(flat_index, values.shape)
+            output.append((int(query), int(key), value))
+            if len(output) >= count:
+                break
+        return output
+
+    positive_edges = strongest_edges(attention_delta, 12, positive=True)
+    negative_edges = strongest_edges(attention_delta, 8, positive=False)
+    edge_limit = max(abs(value) for _, _, value in positive_edges + negative_edges)
+
+    figure = plt.figure(figsize=(7.2, 3.35))
+    outer = figure.add_gridspec(
+        1, 2, width_ratios=(1.0, 1.25), wspace=0.34,
+        left=0.055, right=0.94, top=0.88, bottom=0.15,
+    )
+    static_image = add_map_panel(
+        figure,
+        outer[0],
+        interaction_matrix,
+        interaction_pair.image_a,
+        interaction_pair.image_b,
+        "(a) Interaction CNN: fixed map",
+        cmap="Reds",
+        vmin=0.0,
+        vmax=1.0,
+        x_label="Real-name slice",
+        y_label="Variant slice",
+    )
+    static_axis = figure.add_axes((0.405, 0.22, 0.010, 0.52))
+    static_bar = figure.colorbar(static_image, cax=static_axis)
+    static_bar.ax.set_title("cos", fontsize=6.5, pad=3)
+    static_bar.ax.tick_params(labelsize=5.5, length=2)
+
+    route = figure.add_subplot(outer[1])
+    sequence_length = attention_delta.shape[0]
+    if attention_delta.shape[0] != attention_delta.shape[1]:
+        raise ValueError("Routing comparison currently requires equal query/key slice counts")
+    route.imshow(
+        changed_pair.image_b,
+        cmap="gray",
+        vmin=0,
+        vmax=1,
+        aspect="auto",
+        extent=(-0.5, sequence_length - 0.5, 0.82, 1.0),
+    )
+    route.imshow(
+        changed_pair.image_a,
+        cmap="gray",
+        vmin=0,
+        vmax=1,
+        aspect="auto",
+        extent=(-0.5, sequence_length - 0.5, 0.0, 0.18),
+    )
+    for boundary in np.arange(sequence_length + 1) - 0.5:
+        route.plot((boundary, boundary), (0.0, 0.18), color="0.65", linewidth=0.25)
+        route.plot((boundary, boundary), (0.82, 1.0), color="0.65", linewidth=0.25)
+
+    route.add_patch(
+        Rectangle(
+            (changed_span[0] - 0.5, -0.005),
+            changed_span[1] - changed_span[0] + 1,
+            0.19,
+            fill=False,
+            edgecolor="black",
+            linewidth=1.0,
+            linestyle="--",
+        )
+    )
+    for query, key, value in negative_edges:
+        route.plot(
+            (query, key),
+            (0.80, 0.20),
+            color="#2166ac",
+            linewidth=0.5 + 1.5 * abs(value) / edge_limit,
+            alpha=0.35 + 0.55 * abs(value) / edge_limit,
+            linestyle="--",
+            zorder=2,
+        )
+    for query, key, value in positive_edges:
+        route.annotate(
+            "",
+            xy=(key, 0.20),
+            xytext=(query, 0.80),
+            arrowprops={
+                "arrowstyle": "-|>",
+                "color": "#b2182b",
+                "linewidth": 0.5 + 1.5 * value / edge_limit,
+                "alpha": 0.35 + 0.55 * value / edge_limit,
+                "mutation_scale": 5,
+            },
+            zorder=3,
+        )
+    route.set_xlim(-0.5, sequence_length - 0.5)
+    route.set_ylim(-0.02, 1.02)
+    route.set_xticks(np.arange(0, sequence_length, 5))
+    route.set_yticks([])
+    route.set_xlabel("Slice index", fontsize=7)
+    route.set_title("(b) Cross-attention: adaptive routing", fontsize=8.5, pad=4)
+    image_label_style = {
+        "color": "white",
+        "fontsize": 6.5,
+        "fontweight": "semibold",
+        "bbox": {"facecolor": "black", "edgecolor": "none", "alpha": 0.7, "pad": 1.2},
+    }
+    route.text(
+        0.012, 0.91, "Real queries", transform=route.transAxes,
+        ha="left", va="center", **image_label_style,
+    )
+    route.text(
+        0.012, 0.09, "Variant keys", transform=route.transAxes,
+        ha="left", va="center", **image_label_style,
+    )
+    route.text(
+        np.mean(changed_span), 0.225, "slices affected by a→ǝ",
+        ha="center", va="bottom", fontsize=6.2, fontweight="semibold",
+    )
+    route.legend(
+        handles=[
+            Line2D([0], [0], color="#b2182b", linewidth=1.5, label="increased attention"),
+            Line2D([0], [0], color="#2166ac", linewidth=1.5, linestyle="--", label="decreased attention"),
+        ],
+        loc="center right",
+        frameon=False,
+        fontsize=6,
+    )
+    for suffix in ("png", "pdf"):
+        figure.savefig(output_dir / f"interaction_cnn_vs_cross_attention_routing.{suffix}", dpi=300)
+    plt.close(figure)
+    return {
+        "variant": variant,
+        "real_name": real,
+        "interaction_matrix_shape": list(interaction_matrix.shape),
+        "cross_attention_delta_shape": list(attention_delta.shape),
+        "changed_variant_key_slices": changed_indices.tolist(),
+        "positive_edges": [list(edge) for edge in positive_edges],
+        "negative_edges": [list(edge) for edge in negative_edges],
+        "definition": "Block1 attention(variant,real) - attention(real,real), real query to variant key",
+        "comparison_note": (
+            "Mechanism comparison only; selected models use architecture-specific slice configurations."
+        ),
+    }
+
+
 def main() -> int:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -727,6 +915,16 @@ def main() -> int:
         device,
         args.output_dir,
     )
+    routing_comparison_record = plot_static_map_vs_dynamic_routing(
+        interaction_model,
+        interaction_config,
+        cross_model,
+        cross_config,
+        args.substitution_name,
+        args.base_name,
+        device,
+        args.output_dir,
+    )
     metadata = {
         "device": str(device),
         "font": "DejaVu Sans",
@@ -754,6 +952,7 @@ def main() -> int:
             **cross_record,
             "substitution_contrast": contrast_record,
             "contextual_similarity": contextual_similarity_record,
+            "interaction_cnn_vs_cross_attention_routing": routing_comparison_record,
         },
     }
     (args.output_dir / "figure_metadata.json").write_text(
@@ -787,7 +986,15 @@ def main() -> int:
         "the mean compatibility of each query and emphasizes relative key preference. Dashed "
         "boxes mark the variant slices whose rendered pixels differ from the real name. The "
         "first two panels share a similarity scale; the difference panel uses a separate "
-        "zero-centered scale.\n",
+        "zero-centered scale.\n\n"
+        "Figure: Fixed interaction mapping versus adaptive cross-attention routing. The "
+        "Interaction CNN receives a static encoded-slice cosine map, whereas cross-attention "
+        "dynamically redirects information between real-name queries and variant keys. Red "
+        "arrows show the strongest substitution-induced attention increases, blue dashed "
+        "links show the strongest decreases, and the dashed box marks variant slices whose "
+        "rendered pixels changed. The panels illustrate different mechanisms and are not "
+        "numerically comparable because each selected model uses its own tuned slicing "
+        "configuration.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)

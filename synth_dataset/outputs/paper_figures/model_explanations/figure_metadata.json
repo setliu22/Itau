@@ -456,6 +456,134 @@
       ],
       "symmetric_change_limit": 0.5710441470146179,
       "definition": "row_centered_cosine(after_block_1) - row_centered_cosine(before_cross_attention)"
+    },
+    "interaction_cnn_vs_cross_attention_routing": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "interaction_matrix_shape": [
+        16,
+        16
+      ],
+      "cross_attention_delta_shape": [
+        23,
+        23
+      ],
+      "changed_variant_key_slices": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "positive_edges": [
+        [
+          11,
+          5,
+          0.21550531685352325
+        ],
+        [
+          13,
+          5,
+          0.18622392416000366
+        ],
+        [
+          9,
+          5,
+          0.18476498126983643
+        ],
+        [
+          7,
+          5,
+          0.16607481241226196
+        ],
+        [
+          16,
+          5,
+          0.13358713686466217
+        ],
+        [
+          15,
+          5,
+          0.1315990835428238
+        ],
+        [
+          10,
+          6,
+          0.11857954412698746
+        ],
+        [
+          0,
+          5,
+          0.11668848991394043
+        ],
+        [
+          18,
+          5,
+          0.09728739410638809
+        ],
+        [
+          19,
+          0,
+          0.05790111422538757
+        ],
+        [
+          14,
+          6,
+          0.05719428509473801
+        ],
+        [
+          4,
+          16,
+          0.04841587692499161
+        ]
+      ],
+      "negative_edges": [
+        [
+          11,
+          11,
+          -0.22232121229171753
+        ],
+        [
+          13,
+          13,
+          -0.20219790935516357
+        ],
+        [
+          7,
+          7,
+          -0.19873476028442383
+        ],
+        [
+          9,
+          9,
+          -0.17577403783798218
+        ],
+        [
+          10,
+          10,
+          -0.16808946430683136
+        ],
+        [
+          16,
+          16,
+          -0.14961600303649902
+        ],
+        [
+          15,
+          15,
+          -0.14031991362571716
+        ],
+        [
+          19,
+          5,
+          -0.11360233277082443
+        ]
+      ],
+      "definition": "Block1 attention(variant,real) - attention(real,real), real query to variant key",
+      "comparison_note": "Mechanism comparison only; selected models use architecture-specific slice configurations."
     }
   }
 }
