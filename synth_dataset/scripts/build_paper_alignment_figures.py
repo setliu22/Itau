@@ -900,6 +900,7 @@ def plot_cross_attention_before_after_routing(
     # Mean attention received by key j: Abar_j = (1/L_q) sum_i A_ij.
     clean_received = clean_attention.mean(axis=0)
     spoof_received = spoof_attention.mean(axis=0)
+    received_delta = spoof_received - clean_received
     clean_span_mass = float(clean_received[changed_indices].sum())
     spoof_span_mass = float(spoof_received[changed_indices].sum())
     span_mass_change = spoof_span_mass - clean_span_mass
@@ -950,29 +951,36 @@ def plot_cross_attention_before_after_routing(
     key_strip.set_xticks([])
     key_strip.set_yticks([])
     key_strip.set_title(
-        "(a) Average attention received by each slice", fontsize=8.5, pad=4
+        "(a) Substitution-induced attention change by slice", fontsize=8.5, pad=4
     )
 
     received = figure.add_subplot(left_grid[1], sharex=key_strip)
     indices = np.arange(sequence_length)
     received.axvspan(
         changed_span[0] - 0.5, changed_span[1] + 0.5,
-        color="#f4a261", alpha=0.18, label="glyph-affected slices",
+        color="#f4a261", alpha=0.18,
     )
-    received.plot(
-        indices, clean_received, color="0.35", linewidth=1.2,
-        marker="o", markersize=2.2, label="before substitution",
+    received.bar(
+        indices,
+        received_delta,
+        width=0.72,
+        color=np.where(received_delta >= 0.0, "#b2182b", "#2166ac"),
+        edgecolor="none",
     )
-    received.plot(
-        indices, spoof_received, color="#b2182b", linewidth=1.35,
-        marker="o", markersize=2.2, label="after substitution",
-    )
+    received.axhline(0.0, color="0.25", linewidth=0.7)
     received.set_xlim(-0.5, sequence_length - 0.5)
-    received.set_xlabel("Key-slice index", fontsize=7)
-    received.set_ylabel("Mean attention received", fontsize=7)
+    received.set_xlabel("Attended slice index", fontsize=7)
+    received.set_ylabel("Mean attention change\n(after − before)", fontsize=7)
     received.tick_params(labelsize=6.5, length=2)
     received.grid(axis="y", color="0.88", linewidth=0.45)
-    received.legend(loc="upper right", frameon=False, fontsize=5.8)
+    received.text(
+        np.mean(changed_span),
+        received.get_ylim()[1] * 0.92,
+        "glyph-affected slices",
+        ha="center",
+        va="top",
+        fontsize=5.8,
+    )
 
     route = figure.add_subplot(outer[1])
     route.imshow(
@@ -1184,8 +1192,9 @@ def main() -> int:
         "numerically comparable because each selected model uses its own tuned slicing "
         "configuration.\n\n"
         "Figure: Mathematical view of substitution-induced cross-attention routing. The left "
-        "panel compares the mean attention received by each key slice before and after the "
-        "OCR-confusable substitution, with the glyph-affected span shaded. The right panel "
+        "panel shows the signed change in mean attention received by each slice after subtracting "
+        "the unchanged-name baseline, with the glyph-affected span shaded. This subtraction "
+        "removes the shared sequence-boundary anchor. The right panel "
         "shows the largest signed entries of ΔA = A_spoof - A_clean: red arrows indicate "
         "increased query-to-key attention and blue dashed links indicate decreased attention. "
         "Attention weights are from Block 1 in the real-query-to-variant-key direction and are "
