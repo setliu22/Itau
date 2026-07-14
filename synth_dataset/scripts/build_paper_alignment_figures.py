@@ -61,6 +61,10 @@ DEFAULT_CROSS_ATTENTION_RUN = (
     ROOT
     / "model_results/final_new/v3_transformer_max2_corrected_selection/training_seed_7"
 )
+DEFAULT_NOCOM_CROSS_ATTENTION_RUN = (
+    ROOT
+    / "model_results/optuna_nocom/v2_fast10x5/cross_attention_2block/trials/trial_00004"
+)
 
 
 @dataclass(frozen=True)
@@ -83,6 +87,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--interaction-run", type=Path, default=DEFAULT_INTERACTION_RUN)
     parser.add_argument("--cross-attention-run", type=Path, default=DEFAULT_CROSS_ATTENTION_RUN)
     parser.add_argument(
+        "--nocom-cross-attention-run",
+        type=Path,
+        default=DEFAULT_NOCOM_CROSS_ATTENTION_RUN,
+    )
+    parser.add_argument(
         "--output-dir", type=Path, default=ROOT / "outputs/paper_figures/model_explanations"
     )
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
@@ -92,6 +101,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--transposition-name", default="grammraly")
     parser.add_argument("--deletion-name", default="gramarly")
     parser.add_argument("--multichar-name", default="grarnmarly")
+    parser.add_argument("--nocom-original-name", default="velocify")
+    parser.add_argument("--nocom-variant-name", default="veloçify")
     return parser.parse_args()
 
 
@@ -153,13 +164,13 @@ def render_slices(name: str, config: dict[str, Any]) -> tuple[torch.Tensor, np.n
     return torch.from_numpy(np.asarray(slices, dtype=np.float32)), np.asarray(image, dtype=np.float32)
 
 
-def changed_glyph_slice_span(
+def changed_glyph_slice_spans(
     original: str,
     variant: str,
     config: dict[str, Any],
     sequence_length: int,
-) -> tuple[int, int]:
-    """Map the changed character footprint to slices using DejaVu Sans advances."""
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Return original and variant changed-glyph spans in slice coordinates."""
 
     prefix_length = 0
     while (
@@ -191,24 +202,56 @@ def changed_glyph_slice_span(
         origin_x = (canvas_width - text_width) // 2
         left = origin_x + float(draw.textlength(text[:start], font=font))
         right = origin_x + float(draw.textlength(text[:end], font=font))
+        if bool(config.get("remove_padding", False)):
+            rendered = render_name(
+                text,
+                height=int(config["image_height"]),
+                font_path=font_path,
+                background=str(config["background"]),
+            )
+            background = float(rendered[0, 0])
+            content = np.flatnonzero(~np.all(rendered == background, axis=0))
+            if content.size:
+                left -= float(content[0])
+                right -= float(content[0])
         return left, right
 
-    original_span = text_span(original, prefix_length, original_end)
-    variant_span = text_span(variant, prefix_length, variant_end)
-    left = min(original_span[0], variant_span[0])
-    right = max(original_span[1], variant_span[1])
     slice_width = int(config["slice_width"])
     stride = int(config["stride"])
-    intersecting = [
-        index
-        for index in range(sequence_length)
-        if index * stride < right and index * stride + slice_width > left
-    ]
-    if not intersecting:
-        raise ValueError(
-            f"Changed glyph span [{left:.2f}, {right:.2f}) intersects no slices"
-        )
-    return min(intersecting), max(intersecting)
+
+    def to_slice_span(pixel_span: tuple[float, float]) -> tuple[int, int]:
+        left, right = pixel_span
+        intersecting = [
+            index
+            for index in range(sequence_length)
+            if index * stride < right and index * stride + slice_width > left
+        ]
+        if not intersecting:
+            raise ValueError(
+                f"Changed glyph span [{left:.2f}, {right:.2f}) intersects no slices"
+            )
+        return min(intersecting), max(intersecting)
+
+    return (
+        to_slice_span(text_span(original, prefix_length, original_end)),
+        to_slice_span(text_span(variant, prefix_length, variant_end)),
+    )
+
+
+def changed_glyph_slice_span(
+    original: str,
+    variant: str,
+    config: dict[str, Any],
+    sequence_length: int,
+) -> tuple[int, int]:
+    """Return the union of original and variant changed-glyph slice spans."""
+
+    original_span, variant_span = changed_glyph_slice_spans(
+        original, variant, config, sequence_length
+    )
+    return min(original_span[0], variant_span[0]), max(
+        original_span[1], variant_span[1]
+    )
 
 
 def encode_pair(
@@ -933,16 +976,33 @@ def plot_cross_attention_before_after_routing(
     real: str,
     device: torch.device,
     output_dir: Path,
+    *,
+    variant_first: bool = True,
+    output_stem: str = "cross_attention_before_after_routing_math",
+    use_pixel_difference_span: bool = False,
 ) -> dict[str, Any]:
     """Quantify and visualize the substitution-induced routing change."""
 
-    spoof_pair = encode_pair(model, config, variant, real, device)
+    if variant_first:
+        spoof_pair = encode_pair(model, config, variant, real, device)
+        map_index = 1  # second input queries the changed first-input keys
+        query_image = spoof_pair.image_b
+        key_image = spoof_pair.image_a
+        changed_key_slices = spoof_pair.slices_a
+        orientation = "variant_first; original_query_to_variant_key"
+    else:
+        spoof_pair = encode_pair(model, config, real, variant, device)
+        map_index = 0  # first input queries the changed second-input keys
+        query_image = spoof_pair.image_a
+        key_image = spoof_pair.image_b
+        changed_key_slices = spoof_pair.slices_b
+        orientation = "original_first; original_query_to_variant_key"
     clean_pair = encode_pair(model, config, real, real, device)
     spoof_maps, _ = attention_maps(model, spoof_pair)
     clean_maps, _ = attention_maps(model, clean_pair)
     # Block 1, real-name queries attending to variant/clean key slices.
-    spoof_attention = spoof_maps[1][1]
-    clean_attention = clean_maps[1][1]
+    spoof_attention = spoof_maps[map_index][1]
+    clean_attention = clean_maps[map_index][1]
     if spoof_attention.shape != clean_attention.shape:
         raise ValueError("Before/after attention matrices must have matching shapes")
     delta = spoof_attention - clean_attention
@@ -952,12 +1012,18 @@ def plot_cross_attention_before_after_routing(
 
     real_slices, _ = render_slices(real, config)
     pixel_change = np.mean(
-        np.abs(spoof_pair.slices_a - real_slices.numpy()), axis=(1, 2)
+        np.abs(changed_key_slices - real_slices.numpy()), axis=(1, 2)
     )
     raw_pixel_changed_indices = np.flatnonzero(pixel_change > 1e-6)
     if not raw_pixel_changed_indices.size:
         raise ValueError("No changed key slices found for before/after routing figure")
-    changed_span = changed_glyph_slice_span(real, variant, config, sequence_length)
+    if use_pixel_difference_span:
+        changed_span = (
+            int(raw_pixel_changed_indices.min()),
+            int(raw_pixel_changed_indices.max()),
+        )
+    else:
+        changed_span = changed_glyph_slice_span(real, variant, config, sequence_length)
     changed_indices = np.arange(changed_span[0], changed_span[1] + 1)
 
     # Mean attention received by key j: Abar_j = (1/L_q) sum_i A_ij.
@@ -1006,7 +1072,7 @@ def plot_cross_attention_before_after_routing(
     left_grid = outer[0].subgridspec(2, 1, height_ratios=(0.23, 0.77), hspace=0.05)
     key_strip = figure.add_subplot(left_grid[0])
     key_strip.imshow(
-        spoof_pair.image_a, cmap="gray", vmin=0, vmax=1, aspect="auto",
+        key_image, cmap="gray", vmin=0, vmax=1, aspect="auto",
         extent=(-0.5, sequence_length - 0.5, 0, 1),
     )
     for boundary in np.arange(sequence_length + 1) - 0.5:
@@ -1040,11 +1106,11 @@ def plot_cross_attention_before_after_routing(
 
     route = figure.add_subplot(outer[1])
     route.imshow(
-        spoof_pair.image_b, cmap="gray", vmin=0, vmax=1, aspect="auto",
+        query_image, cmap="gray", vmin=0, vmax=1, aspect="auto",
         extent=(-0.5, sequence_length - 0.5, 0.82, 1.0),
     )
     route.imshow(
-        spoof_pair.image_a, cmap="gray", vmin=0, vmax=1, aspect="auto",
+        key_image, cmap="gray", vmin=0, vmax=1, aspect="auto",
         extent=(-0.5, sequence_length - 0.5, 0.0, 0.18),
     )
     for boundary in np.arange(sequence_length + 1) - 0.5:
@@ -1089,7 +1155,7 @@ def plot_cross_attention_before_after_routing(
         loc="center right", frameon=False, fontsize=6,
     )
     for suffix in ("png", "pdf"):
-        figure.savefig(output_dir / f"cross_attention_before_after_routing_math.{suffix}", dpi=300)
+        figure.savefig(output_dir / f"{output_stem}.{suffix}", dpi=300)
     plt.close(figure)
 
     return {
@@ -1097,6 +1163,10 @@ def plot_cross_attention_before_after_routing(
         "real_name": real,
         "block": 1,
         "direction": "real_query_to_variant_key",
+        "input_orientation": orientation,
+        "highlight_definition": (
+            "rendered_pixel_difference" if use_pixel_difference_span else "changed_glyph_footprint"
+        ),
         "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
         "changed_key_slices": changed_indices.tolist(),
         "full_image_pixel_difference_slices": raw_pixel_changed_indices.tolist(),
@@ -1108,6 +1178,141 @@ def plot_cross_attention_before_after_routing(
         "mean_total_variation_mass_reassigned": redistributed_mass,
         "positive_edges": [list(edge) for edge in positive_edges],
         "negative_edges": [list(edge) for edge in negative_edges],
+    }
+
+
+def plot_cross_attention_local_correspondence(
+    model: PairClassifier,
+    config: dict[str, Any],
+    variant: str,
+    real: str,
+    device: torch.device,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Measure absolute attention from changed-glyph queries to original slices."""
+
+    pair = encode_pair(model, config, variant, real, device)
+    maps, _ = attention_maps(model, pair)
+    title, absolute_attention, _, _ = maps[0]
+    # maps[0] is Block 1 variant-query -> real-key attention.
+    original_span, variant_span = changed_glyph_slice_spans(
+        real, variant, config, absolute_attention.shape[1]
+    )
+    query_indices = np.arange(variant_span[0], variant_span[1] + 1)
+    target_indices = np.arange(original_span[0], original_span[1] + 1)
+    local_attention = absolute_attention[query_indices, :]
+    mean_by_key = local_attention.mean(axis=0)
+    non_target_mask = np.ones(mean_by_key.shape[0], dtype=bool)
+    non_target_mask[target_indices] = False
+    target_mean = float(mean_by_key[target_indices].mean())
+    non_target_mean = float(mean_by_key[non_target_mask].mean())
+    enrichment = target_mean / non_target_mean if non_target_mean > 0 else float("inf")
+    target_mass = float(mean_by_key[target_indices].sum())
+    best_target_index = int(target_indices[np.argmax(mean_by_key[target_indices])])
+    ranked_indices = np.argsort(mean_by_key)[::-1]
+    best_target_rank = int(np.flatnonzero(ranked_indices == best_target_index)[0]) + 1
+    strongest_key_index = int(mean_by_key.argmax())
+
+    block_summaries: list[dict[str, Any]] = []
+    for block_number, map_index in ((1, 0), (2, 2)):
+        block_attention = maps[map_index][1][query_indices, :]
+        block_profile = block_attention.mean(axis=0)
+        block_target_mean = float(block_profile[target_indices].mean())
+        block_non_target_mean = float(block_profile[non_target_mask].mean())
+        block_best_target = int(
+            target_indices[np.argmax(block_profile[target_indices])]
+        )
+        block_ranking = np.argsort(block_profile)[::-1]
+        block_summaries.append(
+            {
+                "block": block_number,
+                "target_region_mean_attention": block_target_mean,
+                "non_target_mean_attention": block_non_target_mean,
+                "target_to_non_target_enrichment": (
+                    block_target_mean / block_non_target_mean
+                    if block_non_target_mean > 0
+                    else float("inf")
+                ),
+                "strongest_key_slice": int(block_profile.argmax()),
+                "best_target_key_slice": block_best_target,
+                "best_target_key_rank": int(
+                    np.flatnonzero(block_ranking == block_best_target)[0]
+                )
+                + 1,
+            }
+        )
+
+    query_crop = np.concatenate(pair.slices_a[query_indices], axis=1)
+    figure = plt.figure(figsize=(7.2, 3.25))
+    outer = figure.add_gridspec(
+        1, 2, width_ratios=(1.08, 1.0), wspace=0.31,
+        left=0.06, right=0.97, top=0.90, bottom=0.16,
+    )
+    image = add_map_panel(
+        figure,
+        outer[0],
+        local_attention,
+        query_crop,
+        pair.image_b,
+        "(a) Absolute attention from ǝ-region slices",
+        cmap="Reds",
+        vmin=0.0,
+        vmax=float(local_attention.max()),
+        x_label="Original-name slice",
+        y_label="ǝ-region query slice",
+        highlight_columns=original_span,
+    )
+    color_axis = figure.add_axes((0.47, 0.24, 0.011, 0.52))
+    colorbar = figure.colorbar(image, cax=color_axis)
+    colorbar.set_label("attention weight", fontsize=6.5)
+    colorbar.ax.tick_params(labelsize=5.5, length=2)
+
+    profile = figure.add_subplot(outer[1])
+    indices = np.arange(mean_by_key.size)
+    colors = np.full(mean_by_key.size, "#8c8c8c", dtype=object)
+    colors[target_indices] = "#b2182b"
+    profile.bar(indices, mean_by_key, width=0.72, color=colors, edgecolor="none")
+    profile.axvspan(
+        original_span[0] - 0.5,
+        original_span[1] + 0.5,
+        color="#f4a261",
+        alpha=0.16,
+        zorder=0,
+    )
+    profile.axhline(
+        1.0 / mean_by_key.size,
+        color="0.25",
+        linewidth=0.8,
+        linestyle=":",
+        label="uniform attention",
+    )
+    profile.set_xlim(-0.5, mean_by_key.size - 0.5)
+    profile.set_xlabel("Original-name slice index", fontsize=7)
+    profile.set_ylabel("Mean absolute attention", fontsize=7)
+    profile.set_title("(b) Correspondence with original slices", fontsize=8.5, pad=4)
+    profile.tick_params(labelsize=6.5, length=2)
+    profile.grid(axis="y", color="0.88", linewidth=0.45)
+    profile.legend(frameon=False, fontsize=6, loc="upper right")
+    for suffix in ("png", "pdf"):
+        figure.savefig(output_dir / f"cross_attention_local_correspondence.{suffix}", dpi=300)
+    plt.close(figure)
+
+    return {
+        "variant": variant,
+        "real_name": real,
+        "block": 1,
+        "direction": title,
+        "variant_query_slice_span": list(variant_span),
+        "original_target_slice_span": list(original_span),
+        "target_region_mean_attention": target_mean,
+        "non_target_mean_attention": non_target_mean,
+        "target_to_non_target_enrichment": enrichment,
+        "target_region_attention_mass": target_mass,
+        "strongest_key_slice": strongest_key_index,
+        "best_target_key_slice": best_target_index,
+        "best_target_key_rank": best_target_rank,
+        "block_summaries": block_summaries,
+        "mean_attention_by_original_slice": mean_by_key.tolist(),
     }
 
 
@@ -1177,6 +1382,32 @@ def main() -> int:
         device,
         args.output_dir,
     )
+    local_correspondence_record = plot_cross_attention_local_correspondence(
+        cross_model,
+        cross_config,
+        args.substitution_name,
+        args.base_name,
+        device,
+        args.output_dir,
+    )
+    nocom_cross_model, nocom_cross_config, nocom_cross_checkpoint = load_model(
+        args.nocom_cross_attention_run, device
+    )
+    if nocom_cross_config["architecture"] != "cross_attention_2block":
+        raise ValueError(
+            "--nocom-cross-attention-run must contain a cross_attention_2block checkpoint"
+        )
+    nocom_localization_record = plot_cross_attention_before_after_routing(
+        nocom_cross_model,
+        nocom_cross_config,
+        args.nocom_variant_name,
+        args.nocom_original_name,
+        device,
+        args.output_dir,
+        variant_first=False,
+        output_stem="cross_attention_nocom_unseen_name_localization",
+        use_pixel_difference_span=True,
+    )
     metadata = {
         "device": str(device),
         "font": "DejaVu Sans",
@@ -1206,6 +1437,21 @@ def main() -> int:
             "contextual_similarity": contextual_similarity_record,
             "interaction_cnn_vs_cross_attention_routing": routing_comparison_record,
             "cross_attention_before_after_routing_math": mathematical_routing_record,
+            "cross_attention_local_correspondence": local_correspondence_record,
+        },
+        "nocom_cross_attention": {
+            "run": str(args.nocom_cross_attention_run.resolve()),
+            "checkpoint": str(nocom_cross_checkpoint.resolve()),
+            "architecture": nocom_cross_config["architecture"],
+            "slice_width": nocom_cross_config["slice_width"],
+            "stride": nocom_cross_config["stride"],
+            "attention_heads": nocom_cross_config["cross_attention_heads"],
+            "attention_blocks": nocom_cross_config["cross_attention_blocks"],
+            "validation_source": str(
+                ROOT / "model_results/domains_spoof_no_com_original_params/pkl_splits/validation.pkl"
+            ),
+            "base_name_absent_from_training_names": True,
+            "localization": nocom_localization_record,
         },
     }
     (args.output_dir / "figure_metadata.json").write_text(
@@ -1256,7 +1502,20 @@ def main() -> int:
         "intersect the substituted glyph: red arrows indicate "
         "increased query-to-key attention and blue dashed links indicate decreased attention. "
         "Attention weights are from Block 1 in the real-query-to-variant-key direction and are "
-        "averaged across heads.\n",
+        "averaged across heads.\n\n"
+        "Figure: Local cross-attention correspondence for the OCR-confusable substitution. "
+        "Absolute Block 1 attention is restricted to query slices intersecting ǝ and compared "
+        "against every original-name slice. The dashed outline and red profile bars identify "
+        "the slices intersecting the corresponding original a; gray bars represent all other "
+        "slices, and the dotted line marks uniform attention. Attention is averaged across "
+        "the selected query slices and four heads.\n\n"
+        "Figure: Cross-attention localization on an unseen Woodbridge (nocom) validation name. "
+        f"The independently trained nocom two-block model compares {args.nocom_original_name!r} "
+        f"with {args.nocom_variant_name!r}; neither complete string occurs in its training split. "
+        "The left panel shows baseline-subtracted mean attention by variant slice, and the right "
+        "panel shows the strongest signed routing changes whose attended slices intersect the "
+        "substituted glyph. Red indicates increased attention and blue indicates decreased "
+        "attention relative to the unchanged-name pair.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)

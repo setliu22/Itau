@@ -590,6 +590,8 @@
       "real_name": "grammarly",
       "block": 1,
       "direction": "real_query_to_variant_key",
+      "input_orientation": "variant_first; original_query_to_variant_key",
+      "highlight_definition": "changed_glyph_footprint",
       "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
       "changed_key_slices": [
         4,
@@ -695,6 +697,192 @@
           8,
           5,
           -0.05672265589237213
+        ]
+      ]
+    },
+    "cross_attention_local_correspondence": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "block": 1,
+      "direction": "B1: variant → real",
+      "variant_query_slice_span": [
+        4,
+        7
+      ],
+      "original_target_slice_span": [
+        4,
+        7
+      ],
+      "target_region_mean_attention": 0.03759390115737915,
+      "non_target_mean_attention": 0.044717077165842056,
+      "target_to_non_target_enrichment": 0.8407056887451474,
+      "target_region_attention_mass": 0.1503756046295166,
+      "strongest_key_slice": 0,
+      "best_target_key_slice": 5,
+      "best_target_key_rank": 9,
+      "block_summaries": [
+        {
+          "block": 1,
+          "target_region_mean_attention": 0.03759390115737915,
+          "non_target_mean_attention": 0.044717077165842056,
+          "target_to_non_target_enrichment": 0.8407056887451474,
+          "strongest_key_slice": 0,
+          "best_target_key_slice": 5,
+          "best_target_key_rank": 9
+        },
+        {
+          "block": 2,
+          "target_region_mean_attention": 0.04466209188103676,
+          "non_target_mean_attention": 0.043229036033153534,
+          "target_to_non_target_enrichment": 1.0331503077418653,
+          "strongest_key_slice": 17,
+          "best_target_key_slice": 7,
+          "best_target_key_rank": 3
+        }
+      ],
+      "mean_attention_by_original_slice": [
+        0.15154537558555603,
+        0.05503164604306221,
+        0.05319058895111084,
+        0.05074521526694298,
+        0.027737107127904892,
+        0.04526371881365776,
+        0.04118506982922554,
+        0.03618970513343811,
+        0.022671204060316086,
+        0.025832556188106537,
+        0.02555147185921669,
+        0.03045886941254139,
+        0.022235535085201263,
+        0.029917113482952118,
+        0.02217417024075985,
+        0.06455270200967789,
+        0.03740938752889633,
+        0.037821587175130844,
+        0.04611524939537048,
+        0.021923549473285675,
+        0.05766686797142029,
+        0.04525787755846977,
+        0.04952344670891762
+      ]
+    }
+  },
+  "nocom_cross_attention": {
+    "run": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/optuna_nocom/v2_fast10x5/cross_attention_2block/trials/trial_00004",
+    "checkpoint": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/optuna_nocom/v2_fast10x5/cross_attention_2block/trials/trial_00004/best.pt",
+    "architecture": "cross_attention_2block",
+    "slice_width": 6,
+    "stride": 3,
+    "attention_heads": 2,
+    "attention_blocks": 2,
+    "validation_source": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/domains_spoof_no_com_original_params/pkl_splits/validation.pkl",
+    "base_name_absent_from_training_names": true,
+    "localization": {
+      "variant": "veloçify",
+      "real_name": "velocify",
+      "block": 1,
+      "direction": "real_query_to_variant_key",
+      "input_orientation": "original_first; original_query_to_variant_key",
+      "highlight_definition": "rendered_pixel_difference",
+      "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
+      "changed_key_slices": [
+        18,
+        19,
+        20
+      ],
+      "full_image_pixel_difference_slices": [
+        18,
+        19,
+        20
+      ],
+      "clean_changed_span_attention_mass": 0.09935182332992554,
+      "spoof_changed_span_attention_mass": 0.21983195841312408,
+      "changed_span_attention_mass_delta": 0.12048013508319855,
+      "frobenius_norm_delta_A": 1.0776934623718262,
+      "max_abs_delta_A": 0.41677457094192505,
+      "mean_total_variation_mass_reassigned": 0.15313434600830078,
+      "positive_edges": [
+        [
+          0,
+          19,
+          0.41677457094192505
+        ],
+        [
+          21,
+          19,
+          0.3642769455909729
+        ],
+        [
+          12,
+          19,
+          0.3336676061153412
+        ],
+        [
+          17,
+          19,
+          0.3195178508758545
+        ],
+        [
+          18,
+          19,
+          0.29979124665260315
+        ],
+        [
+          6,
+          19,
+          0.280815064907074
+        ],
+        [
+          13,
+          19,
+          0.26357200741767883
+        ],
+        [
+          9,
+          19,
+          0.2540014684200287
+        ],
+        [
+          1,
+          19,
+          0.23689976334571838
+        ],
+        [
+          22,
+          19,
+          0.2037462443113327
+        ]
+      ],
+      "negative_edges": [
+        [
+          19,
+          19,
+          -0.1966378390789032
+        ],
+        [
+          20,
+          19,
+          -0.11491747200489044
+        ],
+        [
+          20,
+          20,
+          -0.07483552396297455
+        ],
+        [
+          19,
+          20,
+          -0.01871676743030548
+        ],
+        [
+          10,
+          20,
+          -0.015235267579555511
+        ],
+        [
+          23,
+          18,
+          -0.007810000330209732
         ]
       ]
     }
