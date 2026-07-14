@@ -974,7 +974,11 @@ def plot_cross_attention_before_after_routing(
     def strongest_edges(
         values: np.ndarray, count: int, *, positive: bool
     ) -> list[tuple[int, int, float]]:
-        flat = values.ravel()
+        # Explain only routing changes into the substituted glyph footprint.
+        # Global cross-attention also produces genuine nonlocal changes, but
+        # those do not explain the local substitution shown in this figure.
+        local_values = values[:, changed_indices]
+        flat = local_values.ravel()
         order = np.argsort(flat)
         if positive:
             order = order[::-1]
@@ -983,8 +987,9 @@ def plot_cross_attention_before_after_routing(
             value = float(flat[flat_index])
             if (positive and value <= 0.0) or (not positive and value >= 0.0):
                 break
-            query, key = np.unravel_index(flat_index, values.shape)
-            edges.append((int(query), int(key), value))
+            query, local_key = np.unravel_index(flat_index, local_values.shape)
+            key = int(changed_indices[local_key])
+            edges.append((int(query), key, value))
             if len(edges) >= count:
                 break
         return edges
@@ -1032,14 +1037,6 @@ def plot_cross_attention_before_after_routing(
     received.set_ylabel("Mean attention change\n(after − before)", fontsize=7)
     received.tick_params(labelsize=6.5, length=2)
     received.grid(axis="y", color="0.88", linewidth=0.45)
-    received.text(
-        np.mean(changed_span),
-        received.get_ylim()[1] * 0.92,
-        "glyph-affected slices",
-        ha="center",
-        va="top",
-        fontsize=5.8,
-    )
 
     route = figure.add_subplot(outer[1])
     route.imshow(
@@ -1255,7 +1252,8 @@ def main() -> int:
         "panel shows the signed change in mean attention received by each slice after subtracting "
         "the unchanged-name baseline, with the glyph-affected span shaded. This subtraction "
         "removes the shared sequence-boundary anchor. The right panel "
-        "shows the largest signed entries of ΔA = A_spoof - A_clean: red arrows indicate "
+        "shows the largest signed entries of ΔA = A_spoof - A_clean whose attended slices "
+        "intersect the substituted glyph: red arrows indicate "
         "increased query-to-key attention and blue dashed links indicate decreased attention. "
         "Attention weights are from Block 1 in the real-query-to-variant-key direction and are "
         "averaged across heads.\n",
