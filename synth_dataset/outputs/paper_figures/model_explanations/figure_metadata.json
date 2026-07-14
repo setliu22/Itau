@@ -775,114 +775,119 @@
     "stride": 3,
     "attention_heads": 2,
     "attention_blocks": 2,
-    "validation_source": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/domains_spoof_no_com_original_params/pkl_splits/validation.pkl",
-    "base_name_absent_from_training_names": true,
+    "evaluation_source": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/domains_spoof_no_com_original_params/pkl_splits/test.pkl",
+    "test_row_index": 156,
+    "both_names_absent_from_train_and_validation": true,
     "localization": {
-      "variant": "veloçify",
-      "real_name": "velocify",
+      "variant": "sportmeƌia",
+      "real_name": "sportmedia",
       "block": 1,
       "direction": "real_query_to_variant_key",
       "input_orientation": "original_first; original_query_to_variant_key",
       "highlight_definition": "rendered_pixel_difference",
       "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
       "changed_key_slices": [
-        18,
-        19,
-        20
+        34,
+        35,
+        36,
+        37,
+        38
       ],
       "full_image_pixel_difference_slices": [
-        18,
-        19,
-        20
+        34,
+        35,
+        36,
+        37,
+        38
       ],
-      "clean_changed_span_attention_mass": 0.09935182332992554,
-      "spoof_changed_span_attention_mass": 0.21983195841312408,
-      "changed_span_attention_mass_delta": 0.12048013508319855,
-      "frobenius_norm_delta_A": 1.0776934623718262,
-      "max_abs_delta_A": 0.41677457094192505,
-      "mean_total_variation_mass_reassigned": 0.15313434600830078,
+      "clean_changed_span_attention_mass": 0.12221333384513855,
+      "spoof_changed_span_attention_mass": 0.2460407316684723,
+      "changed_span_attention_mass_delta": 0.12382739782333374,
+      "frobenius_norm_delta_A": 1.0222259759902954,
+      "max_abs_delta_A": 0.4350835978984833,
+      "mean_total_variation_mass_reassigned": 0.13540157741970485,
       "positive_edges": [
         [
           0,
-          19,
-          0.41677457094192505
+          36,
+          0.4350835978984833
         ],
         [
-          21,
-          19,
-          0.3642769455909729
+          26,
+          36,
+          0.2912195324897766
         ],
         [
-          12,
-          19,
-          0.3336676061153412
+          14,
+          36,
+          0.2904767394065857
         ],
         [
-          17,
-          19,
-          0.3195178508758545
+          23,
+          36,
+          0.25154098868370056
         ],
         [
-          18,
-          19,
-          0.29979124665260315
-        ],
-        [
-          6,
-          19,
-          0.280815064907074
-        ],
-        [
-          13,
-          19,
-          0.26357200741767883
+          34,
+          36,
+          0.24483859539031982
         ],
         [
           9,
-          19,
-          0.2540014684200287
+          36,
+          0.23583707213401794
+        ],
+        [
+          10,
+          36,
+          0.21911534667015076
+        ],
+        [
+          30,
+          36,
+          0.21343952417373657
         ],
         [
           1,
-          19,
-          0.23689976334571838
+          36,
+          0.20799750089645386
         ],
         [
-          22,
-          19,
-          0.2037462443113327
+          35,
+          36,
+          0.20685052871704102
         ]
       ],
       "negative_edges": [
         [
-          19,
-          19,
-          -0.1966378390789032
+          17,
+          38,
+          -0.020114101469516754
         ],
         [
-          20,
-          19,
-          -0.11491747200489044
-        ],
-        [
-          20,
-          20,
-          -0.07483552396297455
-        ],
-        [
-          19,
-          20,
-          -0.01871676743030548
-        ],
-        [
-          10,
-          20,
-          -0.015235267579555511
+          14,
+          38,
+          -0.019653741270303726
         ],
         [
           23,
-          18,
-          -0.007810000330209732
+          38,
+          -0.019391749054193497
+        ],
+        [
+          30,
+          38,
+          -0.018905892968177795
+        ],
+        [
+          26,
+          38,
+          -0.018837932497262955
+        ],
+        [
+          20,
+          38,
+          -0.018246475607156754
         ]
       ]
     }

@@ -101,8 +101,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--transposition-name", default="grammraly")
     parser.add_argument("--deletion-name", default="gramarly")
     parser.add_argument("--multichar-name", default="grarnmarly")
-    parser.add_argument("--nocom-original-name", default="velocify")
-    parser.add_argument("--nocom-variant-name", default="veloçify")
+    parser.add_argument("--nocom-original-name", default="sportmedia")
+    parser.add_argument("--nocom-variant-name", default="sportmeƌia")
     return parser.parse_args()
 
 
@@ -1447,10 +1447,11 @@ def main() -> int:
             "stride": nocom_cross_config["stride"],
             "attention_heads": nocom_cross_config["cross_attention_heads"],
             "attention_blocks": nocom_cross_config["cross_attention_blocks"],
-            "validation_source": str(
-                ROOT / "model_results/domains_spoof_no_com_original_params/pkl_splits/validation.pkl"
+            "evaluation_source": str(
+                ROOT / "model_results/domains_spoof_no_com_original_params/pkl_splits/test.pkl"
             ),
-            "base_name_absent_from_training_names": True,
+            "test_row_index": 156,
+            "both_names_absent_from_train_and_validation": True,
             "localization": nocom_localization_record,
         },
     }
@@ -1509,9 +1510,10 @@ def main() -> int:
         "the slices intersecting the corresponding original a; gray bars represent all other "
         "slices, and the dotted line marks uniform attention. Attention is averaged across "
         "the selected query slices and four heads.\n\n"
-        "Figure: Cross-attention localization on an unseen Woodbridge (nocom) validation name. "
+        "Figure: Cross-attention localization on an unseen Woodbridge (nocom) test name. "
         f"The independently trained nocom two-block model compares {args.nocom_original_name!r} "
-        f"with {args.nocom_variant_name!r}; neither complete string occurs in its training split. "
+        f"with {args.nocom_variant_name!r}; neither complete string occurs in its training or "
+        "validation split. "
         "The left panel shows baseline-subtracted mean attention by variant slice, and the right "
         "panel shows the strongest signed routing changes whose attended slices intersect the "
         "substituted glyph. Red indicates increased attention and blue indicates decreased "
