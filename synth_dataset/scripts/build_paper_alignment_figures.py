@@ -32,6 +32,7 @@ from matplotlib import font_manager
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 import torch
 import torch.nn.functional as F
 import yaml
@@ -150,6 +151,64 @@ def render_slices(name: str, config: dict[str, Any]) -> tuple[torch.Tensor, np.n
         remove_padding=False,
     )
     return torch.from_numpy(np.asarray(slices, dtype=np.float32)), np.asarray(image, dtype=np.float32)
+
+
+def changed_glyph_slice_span(
+    original: str,
+    variant: str,
+    config: dict[str, Any],
+    sequence_length: int,
+) -> tuple[int, int]:
+    """Map the changed character footprint to slices using DejaVu Sans advances."""
+
+    prefix_length = 0
+    while (
+        prefix_length < len(original)
+        and prefix_length < len(variant)
+        and original[prefix_length] == variant[prefix_length]
+    ):
+        prefix_length += 1
+    suffix_length = 0
+    while (
+        suffix_length < len(original) - prefix_length
+        and suffix_length < len(variant) - prefix_length
+        and original[-1 - suffix_length] == variant[-1 - suffix_length]
+    ):
+        suffix_length += 1
+    original_end = len(original) - suffix_length
+    variant_end = len(variant) - suffix_length
+    if prefix_length == original_end and prefix_length == variant_end:
+        raise ValueError("Cannot locate a changed glyph in identical strings")
+
+    font_path = str(font_manager.findfont(str(config.get("font", "DejaVu Sans"))))
+    font = ImageFont.truetype(font_path, int(config["image_height"] * 0.8))
+    draw = ImageDraw.Draw(Image.new("L", (1, 1)))
+
+    def text_span(text: str, start: int, end: int) -> tuple[float, float]:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        canvas_width = max(128, text_width + 4)
+        origin_x = (canvas_width - text_width) // 2
+        left = origin_x + float(draw.textlength(text[:start], font=font))
+        right = origin_x + float(draw.textlength(text[:end], font=font))
+        return left, right
+
+    original_span = text_span(original, prefix_length, original_end)
+    variant_span = text_span(variant, prefix_length, variant_end)
+    left = min(original_span[0], variant_span[0])
+    right = max(original_span[1], variant_span[1])
+    slice_width = int(config["slice_width"])
+    stride = int(config["stride"])
+    intersecting = [
+        index
+        for index in range(sequence_length)
+        if index * stride < right and index * stride + slice_width > left
+    ]
+    if not intersecting:
+        raise ValueError(
+            f"Changed glyph span [{left:.2f}, {right:.2f}) intersects no slices"
+        )
+    return min(intersecting), max(intersecting)
 
 
 def encode_pair(
@@ -887,15 +946,19 @@ def plot_cross_attention_before_after_routing(
     if spoof_attention.shape != clean_attention.shape:
         raise ValueError("Before/after attention matrices must have matching shapes")
     delta = spoof_attention - clean_attention
+    sequence_length = delta.shape[0]
+    if delta.shape[0] != delta.shape[1]:
+        raise ValueError("Routing diagram requires equal query and key slice counts")
 
     real_slices, _ = render_slices(real, config)
     pixel_change = np.mean(
         np.abs(spoof_pair.slices_a - real_slices.numpy()), axis=(1, 2)
     )
-    changed_indices = np.flatnonzero(pixel_change > 1e-6)
-    if not changed_indices.size:
+    raw_pixel_changed_indices = np.flatnonzero(pixel_change > 1e-6)
+    if not raw_pixel_changed_indices.size:
         raise ValueError("No changed key slices found for before/after routing figure")
-    changed_span = (int(changed_indices.min()), int(changed_indices.max()))
+    changed_span = changed_glyph_slice_span(real, variant, config, sequence_length)
+    changed_indices = np.arange(changed_span[0], changed_span[1] + 1)
 
     # Mean attention received by key j: Abar_j = (1/L_q) sum_i A_ij.
     clean_received = clean_attention.mean(axis=0)
@@ -929,10 +992,6 @@ def plot_cross_attention_before_after_routing(
     positive_edges = strongest_edges(delta, 10, positive=True)
     negative_edges = strongest_edges(delta, 6, positive=False)
     edge_limit = max(abs(value) for _, _, value in positive_edges + negative_edges)
-    sequence_length = delta.shape[0]
-    if delta.shape[0] != delta.shape[1]:
-        raise ValueError("Routing diagram requires equal query and key slice counts")
-
     figure = plt.figure(figsize=(7.2, 3.35))
     outer = figure.add_gridspec(
         1, 2, width_ratios=(1.0, 1.28), wspace=0.27,
@@ -1043,6 +1102,7 @@ def plot_cross_attention_before_after_routing(
         "direction": "real_query_to_variant_key",
         "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
         "changed_key_slices": changed_indices.tolist(),
+        "full_image_pixel_difference_slices": raw_pixel_changed_indices.tolist(),
         "clean_changed_span_attention_mass": clean_span_mass,
         "spoof_changed_span_attention_mass": spoof_span_mass,
         "changed_span_attention_mass_delta": span_mass_change,

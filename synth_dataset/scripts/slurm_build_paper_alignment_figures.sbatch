@@ -25,4 +25,4 @@ if [[ "${SLURM_RESTART_COUNT:-0}" != "0" ]]; then
   exit 99
 fi
 
-"$PYTHON" scripts/build_paper_alignment_figures.py --device cuda
+"$PYTHON" scripts/build_paper_alignment_figures.py --device "${DEVICE:-cuda}"
