@@ -1152,7 +1152,12 @@ def plot_cross_attention_before_after_routing(
             Line2D([0], [0], color="#b2182b", linewidth=1.5, label="increased attention"),
             Line2D([0], [0], color="#2166ac", linewidth=1.5, linestyle="--", label="decreased attention"),
         ],
-        loc="center right", frameon=False, fontsize=6,
+        loc="upper right",
+        frameon=True,
+        facecolor="white",
+        edgecolor="0.8",
+        framealpha=0.95,
+        fontsize=6.5,
     )
     for suffix in ("png", "pdf"):
         figure.savefig(output_dir / f"{output_stem}.{suffix}", dpi=300)
@@ -1381,6 +1386,7 @@ def main() -> int:
         args.base_name,
         device,
         args.output_dir,
+        output_stem="cross_attention_mix65_routing_math",
     )
     local_correspondence_record = plot_cross_attention_local_correspondence(
         cross_model,
@@ -1405,7 +1411,7 @@ def main() -> int:
         device,
         args.output_dir,
         variant_first=False,
-        output_stem="cross_attention_nocom_unseen_name_localization",
+        output_stem="cross_attention_before_after_routing_math",
         use_pixel_difference_span=True,
     )
     metadata = {
