@@ -867,6 +867,211 @@ def plot_static_map_vs_dynamic_routing(
     }
 
 
+def plot_cross_attention_before_after_routing(
+    model: PairClassifier,
+    config: dict[str, Any],
+    variant: str,
+    real: str,
+    device: torch.device,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Quantify and visualize the substitution-induced routing change."""
+
+    spoof_pair = encode_pair(model, config, variant, real, device)
+    clean_pair = encode_pair(model, config, real, real, device)
+    spoof_maps, _ = attention_maps(model, spoof_pair)
+    clean_maps, _ = attention_maps(model, clean_pair)
+    # Block 1, real-name queries attending to variant/clean key slices.
+    spoof_attention = spoof_maps[1][1]
+    clean_attention = clean_maps[1][1]
+    if spoof_attention.shape != clean_attention.shape:
+        raise ValueError("Before/after attention matrices must have matching shapes")
+    delta = spoof_attention - clean_attention
+
+    real_slices, _ = render_slices(real, config)
+    pixel_change = np.mean(
+        np.abs(spoof_pair.slices_a - real_slices.numpy()), axis=(1, 2)
+    )
+    changed_indices = np.flatnonzero(pixel_change > 1e-6)
+    if not changed_indices.size:
+        raise ValueError("No changed key slices found for before/after routing figure")
+    changed_span = (int(changed_indices.min()), int(changed_indices.max()))
+
+    # Mean attention received by key j: Abar_j = (1/L_q) sum_i A_ij.
+    clean_received = clean_attention.mean(axis=0)
+    spoof_received = spoof_attention.mean(axis=0)
+    clean_span_mass = float(clean_received[changed_indices].sum())
+    spoof_span_mass = float(spoof_received[changed_indices].sum())
+    span_mass_change = spoof_span_mass - clean_span_mass
+    frobenius_norm = float(np.linalg.norm(delta))
+    max_abs_change = float(np.abs(delta).max())
+    redistributed_mass = float(0.5 * np.abs(delta).sum() / delta.shape[0])
+
+    def strongest_edges(
+        values: np.ndarray, count: int, *, positive: bool
+    ) -> list[tuple[int, int, float]]:
+        flat = values.ravel()
+        order = np.argsort(flat)
+        if positive:
+            order = order[::-1]
+        edges: list[tuple[int, int, float]] = []
+        for flat_index in order.tolist():
+            value = float(flat[flat_index])
+            if (positive and value <= 0.0) or (not positive and value >= 0.0):
+                break
+            query, key = np.unravel_index(flat_index, values.shape)
+            edges.append((int(query), int(key), value))
+            if len(edges) >= count:
+                break
+        return edges
+
+    positive_edges = strongest_edges(delta, 10, positive=True)
+    negative_edges = strongest_edges(delta, 6, positive=False)
+    edge_limit = max(abs(value) for _, _, value in positive_edges + negative_edges)
+    sequence_length = delta.shape[0]
+    if delta.shape[0] != delta.shape[1]:
+        raise ValueError("Routing diagram requires equal query and key slice counts")
+
+    figure = plt.figure(figsize=(7.2, 3.35))
+    outer = figure.add_gridspec(
+        1, 2, width_ratios=(1.0, 1.28), wspace=0.27,
+        left=0.075, right=0.97, top=0.89, bottom=0.16,
+    )
+
+    left_grid = outer[0].subgridspec(2, 1, height_ratios=(0.23, 0.77), hspace=0.05)
+    key_strip = figure.add_subplot(left_grid[0])
+    key_strip.imshow(
+        spoof_pair.image_a, cmap="gray", vmin=0, vmax=1, aspect="auto",
+        extent=(-0.5, sequence_length - 0.5, 0, 1),
+    )
+    for boundary in np.arange(sequence_length + 1) - 0.5:
+        key_strip.axvline(boundary, color="0.65", linewidth=0.25)
+    key_strip.set_xlim(-0.5, sequence_length - 0.5)
+    key_strip.set_xticks([])
+    key_strip.set_yticks([])
+    key_strip.set_title(r"(a) Before and after: $\bar{A}_j=L_q^{-1}\sum_i A_{ij}$", fontsize=8.5, pad=4)
+
+    received = figure.add_subplot(left_grid[1], sharex=key_strip)
+    indices = np.arange(sequence_length)
+    received.axvspan(
+        changed_span[0] - 0.5, changed_span[1] + 0.5,
+        color="#f4a261", alpha=0.18, label="glyph-affected slices",
+    )
+    received.plot(
+        indices, clean_received, color="0.35", linewidth=1.2,
+        marker="o", markersize=2.2, label="clean keys",
+    )
+    received.plot(
+        indices, spoof_received, color="#b2182b", linewidth=1.35,
+        marker="o", markersize=2.2, label="spoof keys",
+    )
+    received.set_xlim(-0.5, sequence_length - 0.5)
+    received.set_xlabel("Key-slice index", fontsize=7)
+    received.set_ylabel(r"Mean attention received, $\bar{A}_j$", fontsize=7)
+    received.tick_params(labelsize=6.5, length=2)
+    received.grid(axis="y", color="0.88", linewidth=0.45)
+    received.legend(loc="upper right", frameon=False, fontsize=5.8)
+    received.text(
+        0.02, 0.04,
+        "$M_S(A)=L_q^{-1}\\sum_i\\sum_{j\\in S}A_{ij}$\n"
+        f"clean: {clean_span_mass:.3f}   spoof: {spoof_span_mass:.3f}\n"
+        f"$\\Delta M_S$: {span_mass_change:+.3f}",
+        transform=received.transAxes, fontsize=6.0, va="bottom",
+        bbox={"facecolor": "white", "edgecolor": "0.75", "alpha": 0.92, "pad": 2.0},
+    )
+
+    route = figure.add_subplot(outer[1])
+    route.imshow(
+        spoof_pair.image_b, cmap="gray", vmin=0, vmax=1, aspect="auto",
+        extent=(-0.5, sequence_length - 0.5, 0.82, 1.0),
+    )
+    route.imshow(
+        spoof_pair.image_a, cmap="gray", vmin=0, vmax=1, aspect="auto",
+        extent=(-0.5, sequence_length - 0.5, 0.0, 0.18),
+    )
+    for boundary in np.arange(sequence_length + 1) - 0.5:
+        route.plot((boundary, boundary), (0.0, 0.18), color="0.65", linewidth=0.25)
+        route.plot((boundary, boundary), (0.82, 1.0), color="0.65", linewidth=0.25)
+    route.add_patch(
+        Rectangle(
+            (changed_span[0] - 0.5, -0.005),
+            changed_span[1] - changed_span[0] + 1,
+            0.19, fill=False, edgecolor="black", linewidth=1.0, linestyle="--",
+        )
+    )
+    for query, key, value in negative_edges:
+        route.plot(
+            (query, key), (0.80, 0.20), color="#2166ac",
+            linewidth=0.55 + 1.45 * abs(value) / edge_limit,
+            alpha=0.35 + 0.55 * abs(value) / edge_limit,
+            linestyle="--", zorder=2,
+        )
+    for query, key, value in positive_edges:
+        route.annotate(
+            "", xy=(key, 0.20), xytext=(query, 0.80),
+            arrowprops={
+                "arrowstyle": "-|>", "color": "#b2182b",
+                "linewidth": 0.55 + 1.45 * value / edge_limit,
+                "alpha": 0.35 + 0.55 * value / edge_limit,
+                "mutation_scale": 5,
+            },
+            zorder=3,
+        )
+    route.set_xlim(-0.5, sequence_length - 0.5)
+    route.set_ylim(-0.02, 1.02)
+    route.set_xticks(np.arange(0, sequence_length, 5))
+    route.set_yticks([])
+    route.set_xlabel("Slice index", fontsize=7)
+    route.set_title(r"(b) Net routing change: $\Delta A=A_{spoof}-A_{clean}$", fontsize=8.5, pad=4)
+    image_label_style = {
+        "color": "white", "fontsize": 6.3, "fontweight": "semibold",
+        "bbox": {"facecolor": "black", "edgecolor": "none", "alpha": 0.7, "pad": 1.1},
+    }
+    route.text(
+        0.012, 0.91, "Real queries", transform=route.transAxes,
+        ha="left", va="center", **image_label_style,
+    )
+    route.text(
+        0.012, 0.09, "Spoof keys", transform=route.transAxes,
+        ha="left", va="center", **image_label_style,
+    )
+    route.text(
+        0.985, 0.68,
+        f"$||\\Delta A||_F={frobenius_norm:.3f}$\n"
+        f"$\\max|\\Delta A_{{ij}}|={max_abs_change:.3f}$\n"
+        f"mass reassigned $={redistributed_mass:.3f}$",
+        transform=route.transAxes, ha="right", va="center", fontsize=6.0,
+        bbox={"facecolor": "white", "edgecolor": "0.75", "alpha": 0.92, "pad": 2.0},
+    )
+    route.legend(
+        handles=[
+            Line2D([0], [0], color="#b2182b", linewidth=1.5, label=r"$\Delta A_{ij}>0$"),
+            Line2D([0], [0], color="#2166ac", linewidth=1.5, linestyle="--", label=r"$\Delta A_{ij}<0$"),
+        ],
+        loc="center right", frameon=False, fontsize=6,
+    )
+    for suffix in ("png", "pdf"):
+        figure.savefig(output_dir / f"cross_attention_before_after_routing_math.{suffix}", dpi=300)
+    plt.close(figure)
+
+    return {
+        "variant": variant,
+        "real_name": real,
+        "block": 1,
+        "direction": "real_query_to_variant_key",
+        "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
+        "changed_key_slices": changed_indices.tolist(),
+        "clean_changed_span_attention_mass": clean_span_mass,
+        "spoof_changed_span_attention_mass": spoof_span_mass,
+        "changed_span_attention_mass_delta": span_mass_change,
+        "frobenius_norm_delta_A": frobenius_norm,
+        "max_abs_delta_A": max_abs_change,
+        "mean_total_variation_mass_reassigned": redistributed_mass,
+        "positive_edges": [list(edge) for edge in positive_edges],
+        "negative_edges": [list(edge) for edge in negative_edges],
+    }
+
+
 def main() -> int:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -925,6 +1130,14 @@ def main() -> int:
         device,
         args.output_dir,
     )
+    mathematical_routing_record = plot_cross_attention_before_after_routing(
+        cross_model,
+        cross_config,
+        args.substitution_name,
+        args.base_name,
+        device,
+        args.output_dir,
+    )
     metadata = {
         "device": str(device),
         "font": "DejaVu Sans",
@@ -953,6 +1166,7 @@ def main() -> int:
             "substitution_contrast": contrast_record,
             "contextual_similarity": contextual_similarity_record,
             "interaction_cnn_vs_cross_attention_routing": routing_comparison_record,
+            "cross_attention_before_after_routing_math": mathematical_routing_record,
         },
     }
     (args.output_dir / "figure_metadata.json").write_text(
@@ -994,7 +1208,16 @@ def main() -> int:
         "links show the strongest decreases, and the dashed box marks variant slices whose "
         "rendered pixels changed. The panels illustrate different mechanisms and are not "
         "numerically comparable because each selected model uses its own tuned slicing "
-        "configuration.\n",
+        "configuration.\n\n"
+        "Figure: Mathematical view of substitution-induced cross-attention routing. The left "
+        "panel compares the mean attention received by each key slice before and after the "
+        "OCR-confusable substitution, with the glyph-affected span shaded. The right panel "
+        "shows the largest signed entries of ΔA = A_spoof - A_clean: red arrows indicate "
+        "increased query-to-key attention and blue dashed links indicate decreased attention. "
+        "The insets report changed-span attention mass, the Frobenius norm and maximum absolute "
+        "entry of ΔA, and the mean total-variation mass reassigned across queries. Attention "
+        "weights are from Block 1 in the real-query-to-variant-key direction and are averaged "
+        "across heads.\n",
         encoding="utf-8",
     )
     print(f"Wrote paper figures to {args.output_dir}", flush=True)
