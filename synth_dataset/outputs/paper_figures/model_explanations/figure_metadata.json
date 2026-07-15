@@ -1,0 +1,895 @@
+{
+  "device": "cpu",
+  "font": "DejaVu Sans",
+  "interaction": {
+    "run": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_nocom/v2_fast10x5/training_seed_7",
+    "checkpoint": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_nocom/v2_fast10x5/training_seed_7/best.pt",
+    "architecture": "interaction_cnn",
+    "slice_width": 16,
+    "stride": 8,
+    "channel_visualized": "cosine channel from the exact rich interaction tensor; displayed on [0, 1] because the Conv1D stem ends in ReLU and therefore emits nonnegative vectors",
+    "patterns": [
+      {
+        "pattern": "no change",
+        "variant": "grammarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9970244765281677,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      },
+      {
+        "pattern": "OCR-confusable substitution",
+        "variant": "grǝmmarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9983270764350891,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      },
+      {
+        "pattern": "internal insertion",
+        "variant": "gram-marly",
+        "real_name": "grammarly",
+        "model_probability": 0.9986155033111572,
+        "matrix_shape": [
+          17,
+          16
+        ]
+      },
+      {
+        "pattern": "adjacent transposition",
+        "variant": "grammraly",
+        "real_name": "grammarly",
+        "model_probability": 0.9993607401847839,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      },
+      {
+        "pattern": "internal deletion",
+        "variant": "gramarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9720847010612488,
+        "matrix_shape": [
+          12,
+          16
+        ]
+      },
+      {
+        "pattern": "m→rn substitution",
+        "variant": "grarnmarly",
+        "real_name": "grammarly",
+        "model_probability": 0.9991508722305298,
+        "matrix_shape": [
+          16,
+          16
+        ]
+      }
+    ]
+  },
+  "cross_attention": {
+    "run": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_new/v3_transformer_max2_corrected_selection/training_seed_7",
+    "checkpoint": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_new/v3_transformer_max2_corrected_selection/training_seed_7/best.pt",
+    "architecture": "cross_attention_2block",
+    "slice_width": 6,
+    "stride": 6,
+    "attention_heads": 4,
+    "attention_blocks": 2,
+    "attention_visualized": "per-direction weights averaged across heads",
+    "variant": "grǝmmarly",
+    "real_name": "grammarly",
+    "model_probability": 1.0,
+    "maps": [
+      {
+        "title": "B1: variant → real",
+        "shape": [
+          23,
+          23
+        ]
+      },
+      {
+        "title": "B1: real → variant",
+        "shape": [
+          23,
+          23
+        ]
+      },
+      {
+        "title": "B2: variant → real",
+        "shape": [
+          23,
+          23
+        ]
+      },
+      {
+        "title": "B2: real → variant",
+        "shape": [
+          23,
+          23
+        ]
+      }
+    ],
+    "attention_diagnostics": [
+      {
+        "block": 1,
+        "direction": "variant_to_real",
+        "first_key_mean_attention": 0.1648426055908203,
+        "highest_mean_attention_key": 0,
+        "highest_mean_attention": 0.1648426055908203,
+        "mean_attention_by_key": [
+          0.1648426055908203,
+          0.04355262219905853,
+          0.04166283458471298,
+          0.04409441351890564,
+          0.031394485384225845,
+          0.05777591094374657,
+          0.03299982473254204,
+          0.03055872581899166,
+          0.026944756507873535,
+          0.028772659599781036,
+          0.028345836326479912,
+          0.028833966702222824,
+          0.026293713599443436,
+          0.02777370624244213,
+          0.027209466323256493,
+          0.09351478517055511,
+          0.04070074111223221,
+          0.032888203859329224,
+          0.0364513024687767,
+          0.028246792033314705,
+          0.049325767904520035,
+          0.03642559051513672,
+          0.04139130562543869
+        ],
+        "per_head_first_key_mean_attention": [
+          0.17590418457984924,
+          0.3393426835536957,
+          0.07473430782556534,
+          0.06938924640417099
+        ],
+        "per_head_highest_mean_attention_key": [
+          15,
+          0,
+          0,
+          0
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05145016312599182,
+          0.21407270431518555,
+          0.2362336665391922,
+          0.17234478890895844,
+          0.06821895390748978,
+          0.18915443122386932,
+          0.18225081264972687,
+          0.1266748309135437,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 2.86102294921875e-06
+      },
+      {
+        "block": 1,
+        "direction": "real_to_variant",
+        "first_key_mean_attention": 0.13648495078086853,
+        "highest_mean_attention_key": 0,
+        "highest_mean_attention": 0.13648495078086853,
+        "mean_attention_by_key": [
+          0.13648495078086853,
+          0.036405839025974274,
+          0.0434579961001873,
+          0.03806687518954277,
+          0.029404684901237488,
+          0.1252862960100174,
+          0.04769895225763321,
+          0.021467750892043114,
+          0.028841905295848846,
+          0.023126298561692238,
+          0.027352532371878624,
+          0.02091275528073311,
+          0.03227774798870087,
+          0.023305507376790047,
+          0.026140756905078888,
+          0.06476563960313797,
+          0.04820280149579048,
+          0.04340361803770065,
+          0.02473980188369751,
+          0.030445249751210213,
+          0.05334501713514328,
+          0.03372175991535187,
+          0.04114526882767677
+        ],
+        "per_head_first_key_mean_attention": [
+          0.005615376401692629,
+          0.0994470939040184,
+          0.25200653076171875,
+          0.18887080252170563
+        ],
+        "per_head_highest_mean_attention_key": [
+          5,
+          0,
+          0,
+          0
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05612744763493538,
+          0.21200980246067047,
+          0.2307802438735962,
+          0.1267973780632019,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.13872550427913666,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 8.344650268554688e-06
+      },
+      {
+        "block": 2,
+        "direction": "variant_to_real",
+        "first_key_mean_attention": 0.04016721248626709,
+        "highest_mean_attention_key": 2,
+        "highest_mean_attention": 0.04756637662649155,
+        "mean_attention_by_key": [
+          0.04016721248626709,
+          0.0441882386803627,
+          0.04756637662649155,
+          0.04574913531541824,
+          0.042664431035518646,
+          0.04045876860618591,
+          0.040290698409080505,
+          0.04183073341846466,
+          0.04518619924783707,
+          0.044687964022159576,
+          0.044753123074769974,
+          0.042291466146707535,
+          0.04574406147003174,
+          0.04418366029858589,
+          0.043796367943286896,
+          0.040425125509500504,
+          0.04040198400616646,
+          0.042995572090148926,
+          0.04221966862678528,
+          0.044085294008255005,
+          0.04619545117020607,
+          0.04615050181746483,
+          0.04396796226501465
+        ],
+        "per_head_first_key_mean_attention": [
+          0.043413516134023666,
+          0.03503500297665596,
+          0.04204351827502251,
+          0.04017680510878563
+        ],
+        "per_head_highest_mean_attention_key": [
+          12,
+          21,
+          2,
+          3
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05145016312599182,
+          0.21407270431518555,
+          0.2362336665391922,
+          0.17234478890895844,
+          0.06821895390748978,
+          0.18915443122386932,
+          0.18225081264972687,
+          0.1266748309135437,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 9.5367431640625e-07
+      },
+      {
+        "block": 2,
+        "direction": "real_to_variant",
+        "first_key_mean_attention": 0.04796596243977547,
+        "highest_mean_attention_key": 16,
+        "highest_mean_attention": 0.0508684441447258,
+        "mean_attention_by_key": [
+          0.04796596243977547,
+          0.04642130434513092,
+          0.046663668006658554,
+          0.040290240198373795,
+          0.03960359841585159,
+          0.04839054495096207,
+          0.04833327233791351,
+          0.04335235431790352,
+          0.039620865136384964,
+          0.03972434625029564,
+          0.038958922028541565,
+          0.04001420736312866,
+          0.039589691907167435,
+          0.03976728394627571,
+          0.03828788176178932,
+          0.04842904210090637,
+          0.0508684441447258,
+          0.05007217079401016,
+          0.041255589574575424,
+          0.03885207325220108,
+          0.04318005591630936,
+          0.046514030545949936,
+          0.043844450265169144
+        ],
+        "per_head_first_key_mean_attention": [
+          0.048559997230768204,
+          0.0522720143198967,
+          0.045139603316783905,
+          0.045892227441072464
+        ],
+        "per_head_highest_mean_attention_key": [
+          18,
+          16,
+          6,
+          2
+        ],
+        "first_key_foreground_fraction": 0.12608252465724945,
+        "key_foreground_fraction": [
+          0.12608252465724945,
+          0.20584149658679962,
+          0.25245097279548645,
+          0.18478350341320038,
+          0.05612744763493538,
+          0.21200980246067047,
+          0.2307802438735962,
+          0.1267973780632019,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.13872550427913666,
+          0.09885621070861816,
+          0.19421976804733276,
+          0.18016748130321503,
+          0.1023692786693573,
+          0.19744689762592316,
+          0.1702614426612854,
+          0.18478350341320038,
+          0.043729573488235474,
+          0.22354984283447266,
+          0.21783089637756348,
+          0.17128269374370575
+        ],
+        "weighted_vs_fast_output_max_abs_difference": 7.152557373046875e-07
+      }
+    ],
+    "substitution_contrast": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "baseline_pair": [
+        "grammarly",
+        "grammarly"
+      ],
+      "definition": "attention(variant, real) - attention(real, real)",
+      "block": 1,
+      "direction": "B1: real → variant",
+      "symmetric_color_limit": 0.22231343388557434,
+      "scale_note": "One zero-centered symmetric color scale is used."
+    },
+    "contextual_similarity": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "direction": "real_query_to_variant_key",
+      "before_range": [
+        0.005933232605457306,
+        1.000000238418579
+      ],
+      "after_range": [
+        -0.23824970424175262,
+        0.7008664608001709
+      ],
+      "before_centered_range": [
+        -0.3682388663291931,
+        0.8937419056892395
+      ],
+      "after_centered_range": [
+        -0.3480706512928009,
+        0.6206850409507751
+      ],
+      "change_range": [
+        -0.571037232875824,
+        0.39831703901290894
+      ],
+      "changed_variant_key_slices": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "highlighted_variant_key_span": [
+        4,
+        11
+      ],
+      "shared_similarity_scale": [
+        -0.8937419056892395,
+        0.8937419056892395
+      ],
+      "symmetric_change_limit": 0.571037232875824,
+      "definition": "row_centered_cosine(after_block_1) - row_centered_cosine(before_cross_attention)"
+    },
+    "interaction_cnn_vs_cross_attention_routing": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "interaction_matrix_shape": [
+        16,
+        16
+      ],
+      "cross_attention_delta_shape": [
+        23,
+        23
+      ],
+      "changed_variant_key_slices": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "positive_edges": [
+        [
+          11,
+          5,
+          0.21550315618515015
+        ],
+        [
+          13,
+          5,
+          0.1861748844385147
+        ],
+        [
+          9,
+          5,
+          0.184718519449234
+        ],
+        [
+          7,
+          5,
+          0.1660376787185669
+        ],
+        [
+          16,
+          5,
+          0.13363482058048248
+        ],
+        [
+          15,
+          5,
+          0.13159580528736115
+        ],
+        [
+          10,
+          6,
+          0.11862661689519882
+        ],
+        [
+          0,
+          5,
+          0.11666996777057648
+        ],
+        [
+          18,
+          5,
+          0.0972222089767456
+        ],
+        [
+          19,
+          0,
+          0.05792053043842316
+        ],
+        [
+          14,
+          6,
+          0.05721938982605934
+        ],
+        [
+          4,
+          16,
+          0.04841034859418869
+        ]
+      ],
+      "negative_edges": [
+        [
+          11,
+          11,
+          -0.22231343388557434
+        ],
+        [
+          13,
+          13,
+          -0.20219027996063232
+        ],
+        [
+          7,
+          7,
+          -0.1987491250038147
+        ],
+        [
+          9,
+          9,
+          -0.17569710314273834
+        ],
+        [
+          10,
+          10,
+          -0.16812434792518616
+        ],
+        [
+          16,
+          16,
+          -0.14966168999671936
+        ],
+        [
+          15,
+          15,
+          -0.14031724631786346
+        ],
+        [
+          19,
+          5,
+          -0.11361076682806015
+        ]
+      ],
+      "definition": "Block1 attention(variant,real) - attention(real,real), real query to variant key",
+      "comparison_note": "Mechanism comparison only; selected models use architecture-specific slice configurations."
+    },
+    "cross_attention_before_after_routing_math": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "block": 1,
+      "direction": "real_query_to_variant_key",
+      "input_orientation": "variant_first; original_query_to_variant_key",
+      "highlight_definition": "changed_glyph_footprint",
+      "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
+      "changed_key_slices": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "full_image_pixel_difference_slices": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "clean_changed_span_attention_mass": 0.19289563596248627,
+      "spoof_changed_span_attention_mass": 0.22385770082473755,
+      "changed_span_attention_mass_delta": 0.030962064862251282,
+      "frobenius_norm_delta_A": 0.7286626696586609,
+      "max_abs_delta_A": 0.22231343388557434,
+      "mean_total_variation_mass_reassigned": 0.11392869120058806,
+      "positive_edges": [
+        [
+          11,
+          5,
+          0.21550315618515015
+        ],
+        [
+          13,
+          5,
+          0.1861748844385147
+        ],
+        [
+          9,
+          5,
+          0.184718519449234
+        ],
+        [
+          7,
+          5,
+          0.1660376787185669
+        ],
+        [
+          16,
+          5,
+          0.13363482058048248
+        ],
+        [
+          15,
+          5,
+          0.13159580528736115
+        ],
+        [
+          10,
+          6,
+          0.11862661689519882
+        ],
+        [
+          0,
+          5,
+          0.11666996777057648
+        ],
+        [
+          18,
+          5,
+          0.0972222089767456
+        ],
+        [
+          14,
+          6,
+          0.05721938982605934
+        ]
+      ],
+      "negative_edges": [
+        [
+          7,
+          7,
+          -0.1987491250038147
+        ],
+        [
+          19,
+          5,
+          -0.11361076682806015
+        ],
+        [
+          4,
+          5,
+          -0.0855843797326088
+        ],
+        [
+          18,
+          7,
+          -0.07057987153530121
+        ],
+        [
+          20,
+          5,
+          -0.05819302052259445
+        ],
+        [
+          8,
+          5,
+          -0.05672265589237213
+        ]
+      ]
+    },
+    "cross_attention_local_correspondence": {
+      "variant": "grǝmmarly",
+      "real_name": "grammarly",
+      "block": 1,
+      "direction": "B1: variant → real",
+      "variant_query_slice_span": [
+        4,
+        7
+      ],
+      "original_target_slice_span": [
+        4,
+        7
+      ],
+      "target_region_mean_attention": 0.03759390115737915,
+      "non_target_mean_attention": 0.044717077165842056,
+      "target_to_non_target_enrichment": 0.8407056887451474,
+      "target_region_attention_mass": 0.1503756046295166,
+      "strongest_key_slice": 0,
+      "best_target_key_slice": 5,
+      "best_target_key_rank": 9,
+      "block_summaries": [
+        {
+          "block": 1,
+          "target_region_mean_attention": 0.03759390115737915,
+          "non_target_mean_attention": 0.044717077165842056,
+          "target_to_non_target_enrichment": 0.8407056887451474,
+          "strongest_key_slice": 0,
+          "best_target_key_slice": 5,
+          "best_target_key_rank": 9
+        },
+        {
+          "block": 2,
+          "target_region_mean_attention": 0.04466209188103676,
+          "non_target_mean_attention": 0.043229036033153534,
+          "target_to_non_target_enrichment": 1.0331503077418653,
+          "strongest_key_slice": 17,
+          "best_target_key_slice": 7,
+          "best_target_key_rank": 3
+        }
+      ],
+      "mean_attention_by_original_slice": [
+        0.15154537558555603,
+        0.05503164604306221,
+        0.05319058895111084,
+        0.05074521526694298,
+        0.027737107127904892,
+        0.04526371881365776,
+        0.04118506982922554,
+        0.03618970513343811,
+        0.022671204060316086,
+        0.025832556188106537,
+        0.02555147185921669,
+        0.03045886941254139,
+        0.022235535085201263,
+        0.029917113482952118,
+        0.02217417024075985,
+        0.06455270200967789,
+        0.03740938752889633,
+        0.037821587175130844,
+        0.04611524939537048,
+        0.021923549473285675,
+        0.05766686797142029,
+        0.04525787755846977,
+        0.04952344670891762
+      ]
+    }
+  },
+  "nocom_cross_attention": {
+    "run": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/optuna_nocom/v2_fast10x5/cross_attention_2block/trials/trial_00004",
+    "checkpoint": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/optuna_nocom/v2_fast10x5/cross_attention_2block/trials/trial_00004/best.pt",
+    "architecture": "cross_attention_2block",
+    "slice_width": 6,
+    "stride": 3,
+    "attention_heads": 2,
+    "attention_blocks": 2,
+    "evaluation_source": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/domains_spoof_no_com_original_params/pkl_splits/test.pkl",
+    "test_row_index": 156,
+    "both_names_absent_from_train_and_validation": true,
+    "localization": {
+      "variant": "sportmeƌia",
+      "real_name": "sportmedia",
+      "block": 1,
+      "direction": "real_query_to_variant_key",
+      "input_orientation": "original_first; original_query_to_variant_key",
+      "highlight_definition": "rendered_pixel_difference",
+      "definition": "delta_A = attention(spoof_keys) - attention(clean_keys)",
+      "changed_key_slices": [
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "full_image_pixel_difference_slices": [
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "clean_changed_span_attention_mass": 0.12221333384513855,
+      "spoof_changed_span_attention_mass": 0.2460407316684723,
+      "changed_span_attention_mass_delta": 0.12382739782333374,
+      "frobenius_norm_delta_A": 1.0222259759902954,
+      "max_abs_delta_A": 0.4350835978984833,
+      "mean_total_variation_mass_reassigned": 0.13540157741970485,
+      "positive_edges": [
+        [
+          0,
+          36,
+          0.4350835978984833
+        ],
+        [
+          26,
+          36,
+          0.2912195324897766
+        ],
+        [
+          14,
+          36,
+          0.2904767394065857
+        ],
+        [
+          23,
+          36,
+          0.25154098868370056
+        ],
+        [
+          34,
+          36,
+          0.24483859539031982
+        ],
+        [
+          9,
+          36,
+          0.23583707213401794
+        ],
+        [
+          10,
+          36,
+          0.21911534667015076
+        ],
+        [
+          30,
+          36,
+          0.21343952417373657
+        ],
+        [
+          1,
+          36,
+          0.20799750089645386
+        ],
+        [
+          35,
+          36,
+          0.20685052871704102
+        ]
+      ],
+      "negative_edges": [
+        [
+          17,
+          38,
+          -0.020114101469516754
+        ],
+        [
+          14,
+          38,
+          -0.019653741270303726
+        ],
+        [
+          23,
+          38,
+          -0.019391749054193497
+        ],
+        [
+          30,
+          38,
+          -0.018905892968177795
+        ],
+        [
+          26,
+          38,
+          -0.018837932497262955
+        ],
+        [
+          20,
+          38,
+          -0.018246475607156754
+        ]
+      ]
+    }
+  }
+}

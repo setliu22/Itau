@@ -1,0 +1,37 @@
+{
+  "architecture": "cross_attention_2block",
+  "checkpoint": "/home/setliu22/Itau/synth_dataset/model_results/final_new/v3_transformer_max2_corrected_selection/training_seed_7/best.pt",
+  "checkpoint_best_epoch": 19,
+  "dataset": "new",
+  "seed": 7,
+  "selection_note": "Architecture, configuration, seeds, and threshold were frozen before test access.",
+  "test_at_0_5": {
+    "accuracy": 0.9993888339574754,
+    "f1": 0.9995248025811997,
+    "fn": 25,
+    "fp": 132,
+    "mcc": 0.9986690822143435,
+    "precision": 0.9992012006196747,
+    "recall": 0.9998486142145198,
+    "threshold": 0.5,
+    "tn": 91613,
+    "tp": 165116
+  },
+  "test_at_validation_best_f1_threshold": {
+    "accuracy": 0.9990929828795653,
+    "f1": 0.99929414687198,
+    "fn": 209,
+    "fp": 24,
+    "mcc": 0.9980268293482824,
+    "precision": 0.9998545066563205,
+    "recall": 0.9987344148333848,
+    "threshold": 0.9939701557159424,
+    "tn": 91721,
+    "tp": 164932
+  },
+  "test_examples_per_second": 5678.178543878204,
+  "test_inference_seconds": 45.240916257724166,
+  "test_loss": 0.0022563926890367945,
+  "test_roc_auc": 0.999988806774777,
+  "validation_selected_threshold": 0.9939701557159424
+}

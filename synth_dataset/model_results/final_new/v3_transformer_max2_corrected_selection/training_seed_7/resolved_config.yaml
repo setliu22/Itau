@@ -1,0 +1,46 @@
+dataset: new
+architecture: cross_attention_2block
+image_height: 32
+background: black
+font: DejaVu Sans
+slice_width: 6
+stride_mode: nonoverlap
+stride: 6
+remove_padding: false
+embedding_dim: 128
+learning_rate: 0.00022190559639249238
+weight_decay: 1.0e-06
+dropout: 0.0
+batch_size: 64
+early_stopping_patience: 25
+early_stopping_min_delta: 0.0001
+max_epochs: 25
+num_workers: 4
+seed: 7
+conv_layers: 2
+conv_kernel_size: 3
+activation: relu
+processor: conv1d
+cross_attention_heads: 4
+pooling: attention
+sequence_reduction: attention
+cross_attention_blocks: 2
+cross_attention_has_ffn: true
+cross_attention_ffn_ratio: 1
+cross_attention_ffn_dim: 128
+cross_attention_activation: relu
+final_head: symmetric_linear
+final_hidden_ratio: null
+final_hidden_dim: 128
+final_activation: relu
+pair_symmetry: symmetric_final_features_with_fixed_directional_input_roles
+source_trial: 4
+selection:
+  dataset: new
+  architecture: cross_attention_2block
+  source_trial: 4
+  screening_validation_roc_auc: 0.9999600947757789
+  screening_epochs: 5
+  final_training_epochs: 25
+  seed: 7
+  test_set_used: false

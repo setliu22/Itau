@@ -1,0 +1,17 @@
+Whole-Image CNN Validation Baseline
+===================================
+
+This baseline uses native-width cached images and no vertical slicing.
+All values are validation results; no test split was accessed.
+
+Dataset: nocom
+Best trial: 1
+Validation ROC-AUC: 0.991435511
+Best epoch: 5
+Parameters: {"batch_size": 128, "dropout": 0.1, "early_stopping_patience": 3, "embedding_dim": 128, "final_head": "symmetric_linear", "image_cnn_activation": "relu", "image_cnn_hidden_channels": 64, "image_cnn_kernel_size": 5, "image_cnn_layers": 3, "image_cnn_pooling": "max", "learning_rate": 0.0005018792957929306, "remove_padding": true, "weight_decay": 0.0}
+
+Dataset: new
+Best trial: 0
+Validation ROC-AUC: 0.999873488
+Best epoch: 5
+Parameters: {"batch_size": 64, "dropout": 0.0, "early_stopping_patience": 3, "embedding_dim": 128, "final_head": "symmetric_linear", "image_cnn_activation": "relu", "image_cnn_hidden_channels": 32, "image_cnn_kernel_size": 3, "image_cnn_layers": 2, "image_cnn_pooling": "mean", "learning_rate": 0.001, "remove_padding": false, "weight_decay": 0.0}

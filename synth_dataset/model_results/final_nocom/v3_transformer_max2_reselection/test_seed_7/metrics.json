@@ -1,0 +1,37 @@
+{
+  "architecture": "interaction_cnn",
+  "checkpoint": "/orcd/home/002/setliu22/Itau/synth_dataset/model_results/final_nocom/v3_transformer_max2_reselection/training_seed_7/best.pt",
+  "checkpoint_best_epoch": 10,
+  "dataset": "nocom",
+  "seed": 7,
+  "selection_note": "Architecture, configuration, seeds, and threshold were frozen before test access.",
+  "test_at_0_5": {
+    "accuracy": 0.9633611796672454,
+    "f1": 0.9714590686898827,
+    "fn": 4961,
+    "fp": 4451,
+    "mcc": 0.9203158170941582,
+    "precision": 0.9729637796040843,
+    "recall": 0.969959004729292,
+    "threshold": 0.5,
+    "tn": 87294,
+    "tp": 160180
+  },
+  "test_at_validation_best_f1_threshold": {
+    "accuracy": 0.9624541625468106,
+    "f1": 0.9710303813056602,
+    "fn": 3496,
+    "fp": 6149,
+    "mcc": 0.9179398902537633,
+    "precision": 0.9633538743936017,
+    "recall": 0.9788302117584368,
+    "threshold": 0.3512515425682068,
+    "tn": 85596,
+    "tp": 161645
+  },
+  "test_examples_per_second": 5403.559689676403,
+  "test_inference_seconds": 47.5401429340709,
+  "test_loss": 0.09722980938320461,
+  "test_roc_auc": 0.9942137175412264,
+  "validation_selected_threshold": 0.3512515425682068
+}
